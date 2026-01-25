@@ -2,7 +2,7 @@ using System.Text;
 using BenchmarkDotNet.Attributes;
 using FileGenerator.Generators;
 
-namespace FileGenerator;
+namespace FileGenerator.Generators;
 
 [MemoryDiagnoser]
 public class GenerationBenchmark

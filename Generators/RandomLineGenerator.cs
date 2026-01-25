@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace FileGenerator;
+namespace FileGenerator.Generators;
 
 public class RandomLineGenerator: ILineGenerator
 {
