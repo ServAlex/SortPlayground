@@ -14,6 +14,7 @@ public class ReadBenchmark
 	//private const int ChunkSize = 256 * 1024 * 1024;
 	//private const int BufferSize = 1024 * 1024;
 	private const int LineMaxLength = 10 + 2 + 100 + 1;
+	private const int WorkerCount = 2;
 
 	public async Task ReadToChannel(string fileName = "test.txt")
 	{
@@ -33,6 +34,7 @@ public class ReadBenchmark
 
 			Console.WriteLine("Channel completed async");
 		});
+
 		
 		var charArrayPool = ArrayPool<char>.Shared;
 		var chunk = charArrayPool.Rent(ChunkSize + LineMaxLength);
@@ -103,11 +105,12 @@ public class ReadBenchmark
 	public async Task ReadToChannelSync(string fileName = "test.txt")
 	{
 		_channel = Channel.CreateBounded<Memory<char>>(
-			new BoundedChannelOptions(8)
+			new BoundedChannelOptions(WorkerCount * 2)
 			{
 				SingleWriter = true
 			});
 		
+/*
 		var readerTask = Task.Run(async () =>
 		{
 			await foreach (var item in _channel.Reader.ReadAllAsync())
@@ -117,6 +120,20 @@ public class ReadBenchmark
 
 			Console.WriteLine("Channel completed sync");
 		});
+
+*/
+		var workers = Enumerable
+			.Range(0, 2)
+			.Select(_ => Task.Run(async () =>
+			{
+				Console.WriteLine($"worker started, thread number {Environment.CurrentManagedThreadId}");
+				await foreach (var chunk in _channel.Reader.ReadAllAsync())
+				{
+					// sort
+					// write
+				}
+				Console.WriteLine("Channel completed sync");
+			})).ToList();
 		
 		var charArrayPool = ArrayPool<char>.Shared;
 		var chunk = charArrayPool.Rent(ChunkSize + LineMaxLength);
