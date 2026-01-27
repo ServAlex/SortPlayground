@@ -48,7 +48,7 @@ Console.WriteLine($"read to channel in {sw.ElapsedMilliseconds} ms");
 
 sw.Restart();
 await reader.ReadToChannelSync("test.txt");
-Console.WriteLine($"read to channel in {sw.ElapsedMilliseconds} ms");
+Console.WriteLine($"sync read to channel in {sw.ElapsedMilliseconds} ms");
 
 
 var gcMemoryInfo = GC.GetGCMemoryInfo();
