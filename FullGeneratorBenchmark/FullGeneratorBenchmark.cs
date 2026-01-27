@@ -12,7 +12,7 @@ namespace FileGenerator.FullGeneratorBenchmark;
 public class FullGeneratorBenchmark
 {
 	private const string FileName = "test.txt";
-	private const int DesiredFileSizeMb = 1024*2;
+	private const int DesiredFileSizeMb = 1024;
 	private const int StringPartMaxLength = 100;
 	
 	//[Params(8, 16, 32, 64, 128, 256, 512, 1024)]
@@ -117,7 +117,7 @@ public class FullGeneratorBenchmark
 			}
 			//Console.WriteLine(stringBuilder.Length);
 				
-			writer.WriteLine(stringBuilder);
+			writer.Write(stringBuilder);
 		}
 	}
 	

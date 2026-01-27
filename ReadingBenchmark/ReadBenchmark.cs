@@ -1,11 +1,176 @@
 using System;
+using System.Buffers;
 using System.IO;
 using System.Text;
+using System.Threading.Channels;
 
 namespace FileGenerator.ReadingBenchmark;
 
 public class ReadBenchmark
 {
+	private Channel<Memory<char>> _channel;
+	private const int ChunkSize = 5 * 1024;
+	private const int BufferSize = 1024;
+	//private const int ChunkSize = 256 * 1024 * 1024;
+	//private const int BufferSize = 1024 * 1024;
+	private const int LineMaxLength = 10 + 2 + 100 + 1;
+
+	public async Task ReadToChannel(string fileName = "test.txt")
+	{
+		_channel = Channel.CreateBounded<Memory<char>>(
+			new BoundedChannelOptions(8)
+			{
+				SingleWriter = true
+			});
+		
+		var readerTask = Task.Run(async () =>
+		{
+			await foreach (var item in _channel.Reader.ReadAllAsync())
+			{
+				//Console.WriteLine(item);
+				//Console.WriteLine("channel read");
+			}
+
+			Console.WriteLine("Channel completed async");
+		});
+		
+		var charArrayPool = ArrayPool<char>.Shared;
+		var chunk = charArrayPool.Rent(ChunkSize + LineMaxLength);
+		var chunkLen = 0;
+
+		using var reader = new StreamReader(
+			fileName,
+			Encoding.UTF8,
+			true,
+			new FileStreamOptions
+			{
+				BufferSize = BufferSize,
+				Options = FileOptions.SequentialScan
+			});
+
+		var buffer = new char[BufferSize];
+		
+		//var charsRead = reader.ReadBlock(buffer, 0, buffer.Length);
+		//var charsRead = reader.Read(buffer, 0, buffer.Length);
+		var charsRead = 0;
+		var bufferOffset = 0;
+
+		do
+		{
+			charsRead = await reader.ReadAsync(buffer, 0, buffer.Length);
+			//var bufferSpan = new ReadOnlySpan<char>(buffer, 0, charsRead);
+
+			if (chunkLen + charsRead > ChunkSize)
+			{
+				// complete last line
+				if (chunk[chunkLen - 1] != '\n')
+				{
+					// what if -1?
+					var lineEndIndex = buffer.IndexOf('\n');
+					bufferOffset = lineEndIndex + 1;
+					buffer.AsSpan(0, bufferOffset).CopyTo(chunk.AsSpan(chunkLen));
+					//bufferSpan[..bufferOffset].CopyTo(chunk.AsSpan(chunkLen));
+					chunkLen += bufferOffset;
+
+					//bufferSpan = bufferSpan[bufferOffset..];
+					//charsRead -= lineEndIndex + 1;
+				}
+
+				// flush
+				await _channel.Writer.WriteAsync(chunk.AsMemory(0, chunkLen));
+				chunk = charArrayPool.Rent(ChunkSize);
+				chunkLen = 0;
+			}
+/*
+			bufferSpan = buffer.AsSpan(bufferOffset);
+			bufferSpan.CopyTo(chunk.AsSpan(chunkLen));
+			chunkLen += bufferSpan.Length;
+			*/
+			
+			buffer.AsSpan(bufferOffset).CopyTo(chunk.AsSpan(chunkLen));
+			chunkLen += charsRead - bufferOffset;
+				
+		} while (charsRead - bufferOffset > 0);
+
+		if (chunkLen > 0)
+		{
+			await _channel.Writer.WriteAsync(chunk.AsMemory(0, chunkLen));
+		}
+		
+		_channel.Writer.Complete();
+	}
+	
+	public async Task ReadToChannelSync(string fileName = "test.txt")
+	{
+		_channel = Channel.CreateBounded<Memory<char>>(
+			new BoundedChannelOptions(8)
+			{
+				SingleWriter = true
+			});
+		
+		var readerTask = Task.Run(async () =>
+		{
+			await foreach (var item in _channel.Reader.ReadAllAsync())
+			{
+				//Console.WriteLine(item);
+			}
+
+			Console.WriteLine("Channel completed sync");
+		});
+		
+		var charArrayPool = ArrayPool<char>.Shared;
+		var chunk = charArrayPool.Rent(ChunkSize + LineMaxLength);
+		var chunkLen = 0;
+
+		using var reader = new StreamReader(
+			fileName,
+			Encoding.UTF8,
+			true,
+			new FileStreamOptions
+			{
+				BufferSize = BufferSize,
+				Options = FileOptions.SequentialScan
+			});
+
+		var buffer = new char[BufferSize];
+		var charsRead = 0;
+		var bufferOffset = 0;
+
+		do
+		{
+			charsRead = reader.Read(buffer, 0, buffer.Length);
+
+			if (chunkLen + charsRead > ChunkSize)
+			{
+				// complete last line
+				if (chunk[chunkLen - 1] != '\n')
+				{
+					// what if -1?
+					var lineEndIndex = buffer.IndexOf('\n');
+					bufferOffset = lineEndIndex + 1;
+					buffer.AsSpan(0, bufferOffset).CopyTo(chunk.AsSpan(chunkLen));
+					chunkLen += bufferOffset;
+				}
+
+				// flush
+				await _channel.Writer.WriteAsync(chunk.AsMemory(0, chunkLen));
+				chunk = charArrayPool.Rent(ChunkSize);
+				chunkLen = 0;
+			}
+			
+			buffer.AsSpan(bufferOffset).CopyTo(chunk.AsSpan(chunkLen));
+			chunkLen += charsRead - bufferOffset;
+				
+		} while (charsRead - bufferOffset > 0);
+
+		if (chunkLen > 0)
+		{
+			await _channel.Writer.WriteAsync(chunk.AsMemory(0, chunkLen));
+		}
+		
+		_channel.Writer.Complete();
+	}
+	
 	public void ReadFullFile(string fileName = "text.txt")
 	{
 		using var reader = new StreamReader(
@@ -53,7 +218,7 @@ public class ReadBenchmark
 			});
 
 		var len = reader.BaseStream.Length;
-		Console.WriteLine($"file length: {len / 1024 / 1024} MB");
+//		Console.WriteLine($"file length: {len / 1024 / 1024} MB");
 		
 		var buffer = new char[1024*10];
 		var red = 0;

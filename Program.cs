@@ -18,18 +18,18 @@ using FileGenerator.ReadingBenchmark;
 //Console.WriteLine(summary.Table.ToString());
 
 var sw = Stopwatch.StartNew();
-/*
+
 var generator = new FullGeneratorBenchmark();
 //generator.GenerateFileSingleThreadedLineByLine();
 Console.WriteLine(sw.ElapsedMilliseconds);
 sw.Restart();
 generator.GenerateFileSingleThreadedBatched();
 Console.WriteLine(sw.ElapsedMilliseconds);
-
 Console.WriteLine("file generated");
-*/
+
 
 var reader = new ReadBenchmark();
+
 sw.Restart();
 reader.ReadFullFile("test.txt");
 Console.WriteLine($"read in {sw.ElapsedMilliseconds} ms");
@@ -41,6 +41,14 @@ Console.WriteLine($"read blocked in {sw.ElapsedMilliseconds} ms");
 sw.Restart();
 reader.ReadBlockedSequentialLargeBuf("test.txt");
 Console.WriteLine($"read blocked large buf in {sw.ElapsedMilliseconds} ms");
+
+sw.Restart();
+await reader.ReadToChannel("test.txt");
+Console.WriteLine($"read to channel in {sw.ElapsedMilliseconds} ms");
+
+sw.Restart();
+await reader.ReadToChannelSync("test.txt");
+Console.WriteLine($"read to channel in {sw.ElapsedMilliseconds} ms");
 
 
 var gcMemoryInfo = GC.GetGCMemoryInfo();
