@@ -78,7 +78,8 @@ public class FullGeneratorBenchmark
 	}
 	
 	[Benchmark]
-	public void GenerateFileSingleThreadedBatched()
+	[ArgumentsSource("DesiredFileSizeMb")]
+	public void GenerateFileSingleThreadedBatched(int fileSizeMb)
 	{
 		using var writer = new StreamWriter(
 			FileName, 
@@ -93,7 +94,7 @@ public class FullGeneratorBenchmark
 		var random = new Random();
 		var stringBuilder = new StringBuilder((StringPartMaxLength + 20) * BatchSize);
 		
-		while (writer.BaseStream.Length < (long)DesiredFileSizeMb * 1024 * 1024)
+		while (writer.BaseStream.Length < (long)fileSizeMb * 1024 * 1024)
 		{
 			stringBuilder.Clear();
 

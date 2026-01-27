@@ -17,18 +17,31 @@ using FileGenerator.ReadingBenchmark;
 
 //Console.WriteLine(summary.Table.ToString());
 
+var fileSizeMb = 1024 * 10;
+var generateNewFile = false;
+
+var bufferSizeB = 1024 * 1024;
+var wrokerCount = 4; //Environment.ProcessorCount;
+var chunkSizeB = 256 * 1024 * 1024;
+
 var sw = Stopwatch.StartNew();
 
-var generator = new FullGeneratorBenchmark();
-//generator.GenerateFileSingleThreadedLineByLine();
-Console.WriteLine(sw.ElapsedMilliseconds);
-sw.Restart();
-generator.GenerateFileSingleThreadedBatched();
-Console.WriteLine(sw.ElapsedMilliseconds);
-Console.WriteLine("file generated");
+if (generateNewFile)
+{
+	var generator = new FullGeneratorBenchmark();
+	//generator.GenerateFileSingleThreadedLineByLine();
+	//Console.WriteLine(sw.ElapsedMilliseconds);
+	//sw.Restart();
+	generator.GenerateFileSingleThreadedBatched(fileSizeMb);
+	Console.WriteLine($"file generated in {sw.ElapsedMilliseconds} ms");
+}
+else
+{
+	Console.WriteLine("using old file");
+}
 
 
-var reader = new ReadBenchmark();
+var reader = new ReadBenchmark(bufferSizeB, chunkSizeB, wrokerCount, lineMaxLength:113);
 
 sw.Restart();
 reader.ReadFullFile("test.txt");
@@ -50,10 +63,12 @@ sw.Restart();
 await reader.ReadToChannelSync("test.txt");
 Console.WriteLine($"sync read to channel in {sw.ElapsedMilliseconds} ms");
 
-
+/*
 var gcMemoryInfo = GC.GetGCMemoryInfo();
 var installedMemoryKb = gcMemoryInfo.TotalAvailableMemoryBytes / 1024;
 var usedMemoryKb = GC.GetTotalMemory(true) / 1024;
 var availableMemoryKb = installedMemoryKb - usedMemoryKb;
 
+Console.WriteLine("");
 Console.WriteLine($"used memory: {usedMemoryKb} KB, available memory: {availableMemoryKb} KB");
+*/
