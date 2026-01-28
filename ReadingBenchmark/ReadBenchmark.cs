@@ -25,7 +25,7 @@ public class ReadBenchmark(
 
 	public async Task ReadToChannelSync(string fileName = "test.txt")
 	{
-		_channel = Channel.CreateBounded<Memory<char>>(
+		var channel = Channel.CreateBounded<CharChunk>(
 			new BoundedChannelOptions(workerCount)
 			{
 				SingleWriter = true
@@ -36,7 +36,7 @@ public class ReadBenchmark(
 			.Select(_ => Task.Run(async () =>
 			{
 				Console.WriteLine($"worker started, thread number {Environment.CurrentManagedThreadId}");
-				await foreach (var chunk in _channel.Reader.ReadAllAsync())
+				await foreach (var chunk in channel.Reader.ReadAllAsync())
 				{
 					// sort
 					// write
@@ -49,8 +49,10 @@ public class ReadBenchmark(
 			Console.WriteLine("Started reading");
 
 			var charArrayPool = ArrayPool<char>.Shared;
-			var chunk = charArrayPool.Rent(chunkSize);
-			var chunkLen = 0;
+			var chunk = new CharChunk(chunkSize, charArrayPool);
+				//PooledChunkOwner(chunkSize, charArrayPool);
+			//var chunk = charArrayPool.Rent(chunkSize);
+			//var chunkLen = 0;
 
 			using var reader = new StreamReader(
 				fileName,
@@ -70,35 +72,40 @@ public class ReadBenchmark(
 			{
 				charsRead = reader.Read(buffer, 0, buffer.Length);
 
-				if (chunkLen + charsRead > chunkSize - lineMaxLength)
+				if (chunk.FilledLength + charsRead > chunkSize - lineMaxLength)
 				{
 					// complete last line
-					if (chunk[chunkLen - 1] != '\n')
+					if (chunk.Chunk[chunk.FilledLength - 1] != '\n')
 					{
 						// what if -1?
 						var lineEndIndex = buffer.IndexOf('\n');
 						bufferOffset = lineEndIndex + 1;
-						buffer.AsSpan(0, bufferOffset).CopyTo(chunk.AsSpan(chunkLen));
-						chunkLen += bufferOffset;
+						buffer.AsSpan(0, bufferOffset).CopyTo(chunk.Chunk.AsSpan(chunk.FilledLength));
+						chunk.FilledLength += bufferOffset;
+						//chunkLen += bufferOffset;
 					}
 
 					// flush
-					await _channel.Writer.WriteAsync(chunk.AsMemory(0, chunkLen));
-					chunk = charArrayPool.Rent(chunkSize);
-					chunkLen = 0;
+					await channel.Writer.WriteAsync(chunk);
+					chunk = new CharChunk(chunkSize, charArrayPool);
+					//chunk.AsMemory(0, chunkLen));
+					//chunk = charArrayPool.Rent(chunkSize);
+					//chunkLen = 0;
 				}
 
-				buffer.AsSpan(bufferOffset).CopyTo(chunk.AsSpan(chunkLen));
-				chunkLen += charsRead - bufferOffset;
+				buffer.AsSpan(bufferOffset).CopyTo(chunk.Chunk.AsSpan(chunk.FilledLength));
+				chunk.FilledLength += charsRead - bufferOffset;
+				//buffer.AsSpan(bufferOffset).CopyTo(chunk.Chunk.AsSpan(chunkLen));
+				//chunkLen += charsRead - bufferOffset;
 
 			} while (charsRead - bufferOffset > 0);
 
-			if (chunkLen > 0)
+			if (chunk.FilledLength > 0)
 			{
-				await _channel.Writer.WriteAsync(chunk.AsMemory(0, chunkLen));
+				await channel.Writer.WriteAsync(chunk);
 			}
 
-			_channel.Writer.Complete();
+			channel.Writer.Complete();
 			Console.WriteLine("Channel completed writing");
 		}));
 		
