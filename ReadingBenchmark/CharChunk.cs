@@ -5,29 +5,24 @@ namespace FileGenerator.ReadingBenchmark;
 sealed class CharChunk : IDisposable
 {
 	public char[] Chunk { get; }
-	public int Length { get; }
+	public int StartOffset { get; set; }
 	public int FilledLength { get; set; }
 
+	private readonly int _length;
 	private readonly ArrayPool<char> _pool;
-	private bool _disposed;
 
-	public CharChunk(/*char[] buffer, */int length, ArrayPool<char> pool)
+	public CharChunk(int length, ArrayPool<char> pool)
 	{
-		//Buffer = buffer;
-		Chunk = pool.Rent(length);
-		Length = length;
+		_length = length;
 		_pool = pool;
+		Chunk = _pool.Rent(_length);
 		FilledLength = 0;
 	}
 
-	public Memory<char> Memory => Chunk.AsMemory(0, FilledLength);
-	
-	//public Span<char> Span => Chunk.AsSpan(0, Length);
+	public Span<char> Span => Chunk.AsSpan(0, _length);
 
 	public void Dispose()
 	{
-		if (_disposed) return;
-		_disposed = true;
 		_pool.Return(Chunk);
 	}
 }

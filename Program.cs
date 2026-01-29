@@ -43,14 +43,15 @@ else
 
 var reader = new ReadBenchmark(bufferSizeB, chunkSizeB, wrokerCount, lineMaxLength:113);
 
+/*
 sw.Restart();
 reader.ReadFullFile("test.txt");
 Console.WriteLine($"read in {sw.ElapsedMilliseconds} ms");
-
+*/
 sw.Restart();
 reader.ReadBlocked("test.txt");
 Console.WriteLine($"read blocked in {sw.ElapsedMilliseconds} ms");
-
+/*
 sw.Restart();
 reader.ReadBlockedSequentialLargeBuf("test.txt");
 Console.WriteLine($"read blocked large buf in {sw.ElapsedMilliseconds} ms");
@@ -62,6 +63,11 @@ Console.WriteLine($"read to channel in {sw.ElapsedMilliseconds} ms");
 sw.Restart();
 await reader.ReadToChannelSync("test.txt");
 Console.WriteLine($"sync read to channel in {sw.ElapsedMilliseconds} ms");
+*/
+
+sw.Restart();
+await reader.ReadToChannelSyncNoBuffer("test.txt");
+Console.WriteLine($"direct sync read to channel in {sw.ElapsedMilliseconds} ms");
 
 /*
 var gcMemoryInfo = GC.GetGCMemoryInfo();
