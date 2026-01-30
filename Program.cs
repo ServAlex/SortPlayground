@@ -17,21 +17,18 @@ using FileGenerator.ReadingBenchmark;
 
 //Console.WriteLine(summary.Table.ToString());
 
-var fileSizeMb = 1024 * 1;
+var fileSizeMb = 1024 * 2;
 var generateNewFile = true;
 
 var bufferSizeB = 1024 * 1024;
-var wrokerCount = 1; //Environment.ProcessorCount;
-var chunkSizeB = 32 * 1024 * 1024;
+var wrokerCount = Environment.ProcessorCount - 2;
+var chunkSizeB = 128 * 1024 * 1024;
 
 var sw = Stopwatch.StartNew();
 
 if (generateNewFile)
 {
 	var generator = new FullGeneratorBenchmark();
-	//generator.GenerateFileSingleThreadedLineByLine();
-	//Console.WriteLine(sw.ElapsedMilliseconds);
-	//sw.Restart();
 	generator.GenerateFileSingleThreadedBatched(fileSizeMb);
 	Console.WriteLine($"file generated in {sw.ElapsedMilliseconds} ms");
 }

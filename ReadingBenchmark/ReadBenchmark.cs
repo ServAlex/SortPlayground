@@ -49,7 +49,7 @@ public class ReadBenchmark(
 				{
 					using (chunk)
 					{
-						Stopwatch sw = new Stopwatch();
+						Stopwatch sw = Stopwatch.StartNew();
 						Interlocked.Add(ref sizeCounter, chunk.FilledLength);
 						// parse
 						var estimatedLines = chunk.FilledLength / 50;
@@ -62,11 +62,11 @@ public class ReadBenchmark(
 						Array.Sort(records, 0, count, comparer);
 						
 						// write
-						Console.Write($"sorted chunk with {count} lines in {sw.ElapsedMilliseconds} ms");
+						var sb = new StringBuilder($"sorted chunk with {count} lines in {sw.ElapsedMilliseconds} ms");
 						sw.Restart();
 						
 						using var writer = new StreamWriter(
-							Path.Combine("Chunks", $"chunk_{chunkCounter:00000000}.txt"),
+							Path.Combine("Chunks", $"chunk_{chunkCounter:00000}.txt"),
 							Encoding.UTF8, 
 							new FileStreamOptions
 							{
@@ -74,13 +74,13 @@ public class ReadBenchmark(
 								Mode = FileMode.Create, 
 								Access = FileAccess.Write
 							});
+						Interlocked.Increment(ref chunkCounter);
 						
 						foreach (var line in records)
 						{
-							Interlocked.Increment(ref chunkCounter);
 							writer.WriteLine(chunk.Span.Slice(line.LineOffset, line.LineLength));
 						}
-						Console.WriteLine($", file written in {sw.ElapsedMilliseconds} ms");
+						Console.WriteLine(sb.Append($", file written in {sw.ElapsedMilliseconds} ms"));
 					}
 				}
 			})).ToList();
