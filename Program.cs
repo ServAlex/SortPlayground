@@ -17,12 +17,12 @@ using FileGenerator.ReadingBenchmark;
 
 //Console.WriteLine(summary.Table.ToString());
 
-var fileSizeMb = 1024 * 10;
-var generateNewFile = false;
+var fileSizeMb = 10 * 1;
+var generateNewFile = true;
 
 var bufferSizeB = 1024 * 1024;
-var wrokerCount = 4; //Environment.ProcessorCount;
-var chunkSizeB = 256 * 1024 * 1024;
+var wrokerCount = 1; //Environment.ProcessorCount;
+var chunkSizeB = 1 * 1024 * 1024;
 
 var sw = Stopwatch.StartNew();
 

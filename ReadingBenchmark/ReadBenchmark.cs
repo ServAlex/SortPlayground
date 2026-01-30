@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading.Channels;
@@ -37,29 +38,26 @@ public class ReadBenchmark(
 			.Range(0, workerCount)
 			.Select(_ => Task.Run(async () =>
 			{
-				//Console.WriteLine($"worker started, thread number {Environment.CurrentManagedThreadId}");
 				await foreach (var chunk in channel.Reader.ReadAllAsync())
 				{
 					using (chunk)
 					{
+						Stopwatch sw = new Stopwatch();
 						Interlocked.Add(ref sizeCounter, chunk.FilledLength);
+						// parse
+						var estimatedLines = chunk.FilledLength / 50;
+						var records = new Line[estimatedLines];
+						
+						var count = ParseLines(chunk.Span[..chunk.FilledLength], ref records);
+						
 						// sort
+						var comparer = new LineComparer(chunk.Chunk);
+						Array.Sort(records, 0, count, comparer);
 						// write
-						/*
-						using var writer = new StreamWriter(
-							"compiled.txt", 
-							Encoding.UTF8, 
-							new FileStreamOptions
-							{
-								Mode = FileMode.Append, 
-								Access = FileAccess.Write
-							});
-						writer.Write(chunk.Span[..chunk.FilledLength]);
-						writer.Flush();
-						*/
+						
+						Console.WriteLine($"sorted chunk with {count} lines in {sw.ElapsedMilliseconds} ms");
 					}
 				}
-				//Console.WriteLine($"worker completed reading channel {Environment.CurrentManagedThreadId}");
 			})).ToList();
 
 		// file reader task
@@ -143,9 +141,19 @@ public class ReadBenchmark(
 				{
 					using (chunk)
 					{
+						Stopwatch sw = new Stopwatch();
 						Interlocked.Add(ref sizeCounter, chunk.FilledLength);
+						// parse
+						var estimatedLines = chunk.FilledLength / 50;
+						var records = new Line[estimatedLines];
+						
+						var count = ParseLines(chunk.Span, ref records);
+						
 						// sort
+						records.Sort();
 						// write
+						
+						Console.WriteLine($"sorted chunk with {count} lines in {sw.ElapsedMilliseconds} ms");
 					}
 				}
 				//Console.WriteLine($"worker completed reading channel {Environment.CurrentManagedThreadId}");
@@ -221,6 +229,48 @@ public class ReadBenchmark(
 		
 		Console.WriteLine($"Channel completed async file read {readCounter}, read in channel {sizeCounter}");
 	}
+	
+	static int ParseLines(ReadOnlySpan<char> data, ref Line[] records)
+	{
+		int count = 0;
+		int i = 0;
+
+		while (i < data.Length)
+		{
+			if (count == records.Length)
+				Array.Resize(ref records, records.Length * 2);
+
+			int lineStart = i;
+
+			int number = 0;
+			while (data[i] != '.')
+				number = number * 10 + (data[i++] - '0');
+
+			i++; // '.'
+			if (data[i] == ' ') i++;
+
+			int textStart = i;
+
+			while (i < data.Length && data[i] != '\n')
+				i++;
+
+			int lineEnd = i;
+			int lineLength = lineEnd - lineStart;
+			int textLength = lineEnd - textStart;
+
+			ref var r = ref records[count++];
+			r.Number = number;
+			r.LineOffset = lineStart;
+			r.StringOffset = textStart;
+			r.LineLength = (short)lineLength;
+			r.StringLength = (short)textLength;
+			r.Prefix = Line.EncodeAscii8(data.Slice(textStart, textLength));
+
+			i++; // '\n'
+		}
+
+		return count;
+	}	
 	
 	public async Task ReadToChannel(string fileName = "test.txt")
 	{
