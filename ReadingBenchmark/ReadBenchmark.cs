@@ -30,8 +30,15 @@ public class ReadBenchmark(
 		long sizeCounter = 0;
 		long readCounter = 0;
 		long sentCounter = 0;
+		int chunkCounter = 0;
 		
 		//File.Delete("compiled.txt");
+		if (Directory.Exists("Chunks"))
+		{
+			Directory.Delete("Chunks", true);
+		}
+		
+		Directory.CreateDirectory("Chunks");
 		
 		// worker tasks
 		var tasks = Enumerable
@@ -53,9 +60,27 @@ public class ReadBenchmark(
 						// sort
 						var comparer = new LineComparer(chunk.Chunk);
 						Array.Sort(records, 0, count, comparer);
-						// write
 						
-						Console.WriteLine($"sorted chunk with {count} lines in {sw.ElapsedMilliseconds} ms");
+						// write
+						Console.Write($"sorted chunk with {count} lines in {sw.ElapsedMilliseconds} ms");
+						sw.Restart();
+						
+						using var writer = new StreamWriter(
+							Path.Combine("Chunks", $"chunk_{chunkCounter:00000000}.txt"),
+							Encoding.UTF8, 
+							new FileStreamOptions
+							{
+								BufferSize = 1 << 22, 
+								Mode = FileMode.Create, 
+								Access = FileAccess.Write
+							});
+						
+						foreach (var line in records)
+						{
+							Interlocked.Increment(ref chunkCounter);
+							writer.WriteLine(chunk.Span.Slice(line.LineOffset, line.LineLength));
+						}
+						Console.WriteLine($", file written in {sw.ElapsedMilliseconds} ms");
 					}
 				}
 			})).ToList();
