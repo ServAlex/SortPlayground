@@ -1,4 +1,4 @@
-namespace FileGenerator.ReadingBenchmark;
+namespace FileGenerator.FileSorter;
 
 public readonly struct LineComparer(char[] buffer) : IComparer<Line>
 {
@@ -8,8 +8,8 @@ public readonly struct LineComparer(char[] buffer) : IComparer<Line>
 		if (prefixComparison != 0)
 			return prefixComparison;
 
-		var spanA = buffer.AsSpan(a.StringOffset, a.StringLength);
-		var spanB = buffer.AsSpan(b.StringOffset, b.StringLength);
+		var spanA = buffer.AsSpan(a.LineOffset + a.StringOffsetFromLine, a.StringLength);
+		var spanB = buffer.AsSpan(b.LineOffset + b.StringOffsetFromLine, b.StringLength);
 
 		var sequenceCompare = spanA.SequenceCompareTo(spanB);
 		if (sequenceCompare != 0)

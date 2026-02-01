@@ -3,11 +3,11 @@ using System;
 using System.Diagnostics;
 using BenchmarkDotNet.Running;
 using FileGenerator;
+using FileGenerator.FileSorter;
 using FileGenerator.FileWriterBenchmark;
 using FileGenerator.FixedLengthGenerators;
 using FileGenerator.FullGeneratorBenchmark;
 using FileGenerator.Generators;
-using FileGenerator.ReadingBenchmark;
 
 //var summary = BenchmarkRunner.Run<GenerationBenchmark>();
 //var summary = BenchmarkRunner.Run<GivenLengthLineGeneratorBenchmark>();
@@ -38,7 +38,7 @@ else
 }
 
 
-var reader = new ReadBenchmark(bufferSizeB, chunkSizeB, wrokerCount, lineMaxLength:113);
+var sorter = new LargeFileSorter(bufferSizeB, chunkSizeB, wrokerCount, lineMaxLength:113);
 
 /*
 sw.Restart();
@@ -65,7 +65,7 @@ Console.WriteLine($"sync read to channel in {sw.ElapsedMilliseconds} ms");
 */
 
 sw.Restart();
-await reader.ReadToChannelSyncNoBuffer("test.txt");
+await sorter.SortFile("test.txt");
 Console.WriteLine($"direct sync read to channel in {sw.ElapsedMilliseconds} ms");
 
 /*

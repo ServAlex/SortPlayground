@@ -1,16 +1,18 @@
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
 
-namespace FileGenerator.ReadingBenchmark;
+namespace FileGenerator.FileSorter;
 
-public class ReadBenchmark(
+public class LargeFileSorter(
 	int bufferSize,
 	int chunkSize = 1024 * 1024,
 	int workerCount = 2,
 	int lineMaxLength = 10 + 2 + 100 + 1,
-	int empiricalConservativeLineLength = 50)
+	int empiricalConservativeLineLength = 50,
+	int fileMaxLength = int.MaxValue)
 {
 	private int _chunkCounter = 0; 
 	
@@ -20,7 +22,10 @@ public class ReadBenchmark(
 			SingleWriter = true
 		});
 
-	public async Task ReadToChannelSyncNoBuffer(string fileName = "test.txt")
+	private readonly SortedChunk[] _sortedChunks = new SortedChunk[6];
+	private readonly Lock _lock = new();
+
+	public async Task SortFile(string fileName = "test.txt")
 	{
 		var channelCapacity = workerCount;
 		var channel = Channel.CreateBounded<CharChunk>(
@@ -41,7 +46,7 @@ public class ReadBenchmark(
 		// worker tasks
 		tasks.AddRange( Enumerable
 				.Range(0, workerCount)
-				.Select(_ => Task.Run(async () => await SorterAsync(channel, channelCapacity)))
+				.Select(_ => Task.Run(async () => await WorkerAsync(channel, channelCapacity)))
 			);
 		
 		await Task.WhenAll(tasks);
@@ -100,7 +105,7 @@ public class ReadBenchmark(
 		Console.WriteLine("Channel completed writing");
 	}
 
-	private async Task SorterAsync(Channel<CharChunk> channel, int channelCapacity)
+	private async Task WorkerAsync(Channel<CharChunk> channel, int channelCapacity)
 	{
 		await foreach (var chunk in channel.Reader.ReadAllAsync())
 		{
@@ -114,8 +119,17 @@ public class ReadBenchmark(
 				var count = ParseLines(chunk.Span[..chunk.FilledLength], ref records);
 						
 				// sort
-				var comparer = new LineComparer(chunk.Chunk);
+				var comparer = new LineComparer(chunk.Buffer);
 				Array.Sort(records, 0, count, comparer);
+			/*	
+				SortedChunk sortedChunk = new SortedChunk(records, chunk, dataLengthToRank(count), count);
+
+				lock (_lock)
+				{
+					
+				}
+				*/
+				
 						
 				// write
 				var sb = new StringBuilder($"sorted chunk with {count} lines in {sw.ElapsedMilliseconds} ms, queue {channel.Reader.Count}/{channelCapacity}");
@@ -139,6 +153,20 @@ public class ReadBenchmark(
 				Console.WriteLine(sb.Append($", file written in {sw.ElapsedMilliseconds} ms"));
 			}
 		}
+	}
+
+	// todo: optimize
+	private int dataLengthToRank(int length)
+	{
+		var rank = 0;
+		var maxLength = fileMaxLength;
+		while (length < maxLength/2 || rank < 5)
+		{
+			rank++;
+			maxLength /= 2;
+		}
+
+		return rank;
 	}
 
 	static int ParseLines(ReadOnlySpan<char> data, ref Line[] records)
@@ -172,9 +200,10 @@ public class ReadBenchmark(
 			ref var r = ref records[count++];
 			r.Number = number;
 			r.LineOffset = lineStart;
-			r.StringOffset = textStart;
+			r.StringOffsetFromLine = (short)(textStart - lineStart);
 			r.LineLength = (short)lineLength;
 			r.StringLength = (short)textLength;
+			r.ChunkIndex = 0;
 			r.Prefix = Line.EncodeAscii8(data.Slice(textStart, textLength));
 
 			i++; // '\n'

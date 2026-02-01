@@ -1,10 +1,10 @@
 using System.Buffers;
 
-namespace FileGenerator.ReadingBenchmark;
+namespace FileGenerator.FileSorter;
 
-sealed class CharChunk : IDisposable
+public sealed class CharChunk : IDisposable
 {
-	public char[] Chunk { get; }
+	public char[] Buffer { get; }
 	public int StartOffset { get; set; }
 	public int FilledLength { get; set; }
 
@@ -15,14 +15,14 @@ sealed class CharChunk : IDisposable
 	{
 		_length = length;
 		_pool = pool;
-		Chunk = _pool.Rent(_length);
+		Buffer = _pool.Rent(_length);
 		FilledLength = 0;
 	}
 
-	public Span<char> Span => Chunk.AsSpan(0, _length);
+	public Span<char> Span => Buffer.AsSpan(0, _length);
 
 	public void Dispose()
 	{
-		_pool.Return(Chunk);
+		_pool.Return(Buffer);
 	}
 }
