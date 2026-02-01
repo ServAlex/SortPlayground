@@ -21,8 +21,9 @@ public class ReadBenchmark(
 
 	public async Task ReadToChannelSyncNoBuffer(string fileName = "test.txt")
 	{
+		var channelCapacity = workerCount;
 		var channel = Channel.CreateBounded<CharChunk>(
-			new BoundedChannelOptions(workerCount)
+			new BoundedChannelOptions(channelCapacity)
 			{
 				SingleWriter = true
 			});
@@ -62,7 +63,7 @@ public class ReadBenchmark(
 						Array.Sort(records, 0, count, comparer);
 						
 						// write
-						var sb = new StringBuilder($"sorted chunk with {count} lines in {sw.ElapsedMilliseconds} ms");
+						var sb = new StringBuilder($"sorted chunk with {count} lines in {sw.ElapsedMilliseconds} ms, queue {channel.Reader.Count}/{channelCapacity}");
 						sw.Restart();
 						
 						using var writer = new StreamWriter(

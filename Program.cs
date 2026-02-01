@@ -17,8 +17,8 @@ using FileGenerator.ReadingBenchmark;
 
 //Console.WriteLine(summary.Table.ToString());
 
-var fileSizeMb = 1024 * 2;
-var generateNewFile = true;
+var fileSizeMb = 1024 * 4;
+var generateNewFile = false; //true;
 
 var bufferSizeB = 1024 * 1024;
 var wrokerCount = Environment.ProcessorCount - 2;
@@ -45,9 +45,11 @@ sw.Restart();
 reader.ReadFullFile("test.txt");
 Console.WriteLine($"read in {sw.ElapsedMilliseconds} ms");
 */
+/*
 sw.Restart();
 reader.ReadBlocked("test.txt");
 Console.WriteLine($"read blocked in {sw.ElapsedMilliseconds} ms");
+*/
 /*
 sw.Restart();
 reader.ReadBlockedSequentialLargeBuf("test.txt");
