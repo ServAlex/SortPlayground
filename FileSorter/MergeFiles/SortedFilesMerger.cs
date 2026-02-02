@@ -4,7 +4,7 @@ namespace FileGenerator.FileSorter.MergeFiles;
 
 public class SortedFilesMerger
 {
-	public long MergeSortedFiles(
+	public static long MergeSortedFiles(
 		string directoryName, 
 		string destinationFileName, 
 		int readerBufferSize,

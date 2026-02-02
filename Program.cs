@@ -17,14 +17,14 @@ using FileGenerator.Generators;
 
 //Console.WriteLine(summary.Table.ToString());
 
-var fileSizeMb = 1024 * 20;
+var fileSizeMb = 1024 * 4;
 var generateNewFile = false;
 
 var bufferSizeB = 1024 * 1024;
 var wrokerCount = 4; //Environment.ProcessorCount - 2;
 var queueLength = 6;
 var chunkSizeB = 250 * 1024 * 1024;
-var mergeMaxStoredSizeMb = 2 * 1000;
+var mergeMaxStoredSizeMb = 500;//2 * 1000;
 
 var sw = Stopwatch.StartNew();
 

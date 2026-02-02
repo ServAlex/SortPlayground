@@ -67,7 +67,8 @@ public class SortedChunk
 			if (Compare(a, b, chunkA._subChunks, chunkB._subChunks) < 0)
 			{
 				i++;
-				stream.WriteLine(chunkA._subChunks[a.ChunkIndex].Span.Slice(a.LineOffset, a.LineLength));
+				if(a.LineLength > 0)
+					stream.WriteLine(chunkA._subChunks[a.ChunkIndex].Span.Slice(a.LineOffset, a.LineLength));
 				
 				/*
 				todo: write to bubber and flush it
@@ -87,7 +88,8 @@ public class SortedChunk
 			else
 			{
 				j++;
-				stream.WriteLine(chunkB._subChunks[b.ChunkIndex].Span.Slice(b.LineOffset, b.LineLength));
+				if(b.LineLength > 0)
+					stream.WriteLine(chunkB._subChunks[b.ChunkIndex].Span.Slice(b.LineOffset, b.LineLength));
 			}
 		}
 
@@ -100,7 +102,8 @@ public class SortedChunk
 		for (var i = startIndex; i < LinesCount; i++)
 		{
 			ref readonly var line = ref _lines[i];
-			writer.WriteLine(_subChunks[line.ChunkIndex].Span.Slice(line.LineOffset, line.LineLength));
+			if(line.LineLength > 0)
+				writer.WriteLine(_subChunks[line.ChunkIndex].Span.Slice(line.LineOffset, line.LineLength));
 		}
 	}
 

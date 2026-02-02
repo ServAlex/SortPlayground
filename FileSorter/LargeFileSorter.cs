@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
+using FileGenerator.FileSorter.MergeFiles;
 
 namespace FileGenerator.FileSorter;
 
@@ -48,6 +49,8 @@ public class LargeFileSorter(
 		
 		await Task.WhenAll(tasks);
 		FlushRemainingChunks();
+		
+		SortedFilesMerger.MergeSortedFiles("Chunks", "sorted.txt", bufferSize, bufferSize);
 	}
 
 	private async Task ReadAsync(string fileName, Channel<CharChunk> channel)
