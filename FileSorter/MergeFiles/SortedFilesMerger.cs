@@ -47,7 +47,7 @@ public class SortedFilesMerger
 		//while (readers.Any(r => !r.EndOfFile))
 		while (pq.TryDequeue(out var reader, out var priorityKey))
 		{
-			writer.Write(reader.LineString);
+			writer.WriteLine(reader.LineString);
 			totalLines++;
 			if (reader.ReadLine())
 			{
