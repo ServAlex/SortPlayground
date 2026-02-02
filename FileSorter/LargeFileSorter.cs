@@ -12,9 +12,10 @@ public class LargeFileSorter(
 	int workerCount = 2,
 	int lineMaxLength = 10 + 2 + 100 + 1,
 	int empiricalConservativeLineLength = 50,
-	int fileMaxLength = int.MaxValue)
+	int fileMaxLength = int.MaxValue/2/2)
 {
 	private int _chunkCounter = 0; 
+	private int _fileChunkCounter = 0; 
 	
 	private Channel<Memory<char>> _channel = Channel.CreateBounded<Memory<char>>(
 		new BoundedChannelOptions(1)
@@ -22,8 +23,9 @@ public class LargeFileSorter(
 			SingleWriter = true
 		});
 
-	private readonly SortedChunk[] _sortedChunks = new SortedChunk[6];
+	private readonly SortedChunk?[] _sortedChunks = new SortedChunk?[6];
 	private readonly Lock _lock = new();
+	private readonly Lock _fileCounterLock = new();
 
 	public async Task SortFile(string fileName = "test.txt")
 	{
@@ -50,6 +52,7 @@ public class LargeFileSorter(
 			);
 		
 		await Task.WhenAll(tasks);
+		FlushRemainingChunks();
 	}
 
 	private async Task ReadAsync(string fileName, Channel<CharChunk> channel)
@@ -74,8 +77,10 @@ public class LargeFileSorter(
 		do
 		{
 			var charsRead = reader.Read(chunk.Span[chunk.StartOffset..]);
-			isReadToEnd = chunk.StartOffset + charsRead < chunkSize;
-				
+			//isReadToEnd = chunk.StartOffset + charsRead < chunkSize;
+			isReadToEnd = reader.Peek() == -1;
+
+			//var isRead = reader.EndOfStream;
 			var lineEndIndex = chunk.Span.LastIndexOf('\n');
 			if (isReadToEnd)
 			{
@@ -109,58 +114,134 @@ public class LargeFileSorter(
 	{
 		await foreach (var chunk in channel.Reader.ReadAllAsync())
 		{
-			using (chunk)
-			{
-				Stopwatch sw = Stopwatch.StartNew();
-				// parse
-				var estimatedLines = chunk.FilledLength / empiricalConservativeLineLength;
-				var records = new Line[estimatedLines];
-						
-				var count = ParseLines(chunk.Span[..chunk.FilledLength], ref records);
-						
-				// sort
-				var comparer = new LineComparer(chunk.Buffer);
-				Array.Sort(records, 0, count, comparer);
-			/*	
-				SortedChunk sortedChunk = new SortedChunk(records, chunk, dataLengthToRank(count), count);
-
-				lock (_lock)
-				{
+			Stopwatch sw = Stopwatch.StartNew();
+			// parse
+			var estimatedLines = chunk.FilledLength / empiricalConservativeLineLength;
+			var records = new Line[estimatedLines];
 					
-				}
-				*/
+			var count = ParseLines(chunk.Span[..chunk.FilledLength], ref records);
+					
+			// sort
+			var comparer = new LineComparer(chunk.Buffer);
+			Array.Sort(records, 0, count, comparer);
+			
+			var sb = new StringBuilder($"sorted chunk {_chunkCounter:0000} with {count} lines in {sw.ElapsedMilliseconds} ms, Q {channel.Reader.Count}/{channelCapacity}");
+			Console.WriteLine(sb);
+			sw.Restart();
+			Interlocked.Increment(ref _chunkCounter);
+			
+			var rank = DataLengthToRank(chunk.FilledLength);
+			SortedChunk sortedChunk = new SortedChunk(records, chunk, rank, count);
+
+			// merge
+			MergeChunks(sortedChunk);
+			
+			// todo: wait if too much memory is occupied
+		}
+		
+		// merge all remaining sorted chunks
+	}
+
+	private void FlushRemainingChunks()
+	{
+		// excessive lock, this is the only thread running
+		lock (_lock)
+		{
+			Console.WriteLine($"flushing ramaining accumulated chunks {string.Join(", ", _sortedChunks.Select(c => c is null?"0":"1" ))}");
+			SortedChunk? element;
+			for(var i = 5; i>0;i--)
+			{
+				element = _sortedChunks[i];
+
+				if (element is null) continue;
 				
-						
-				// write
-				var sb = new StringBuilder($"sorted chunk with {count} lines in {sw.ElapsedMilliseconds} ms, queue {channel.Reader.Count}/{channelCapacity}");
-				sw.Restart();
-						
-				using var writer = new StreamWriter(
-					Path.Combine("Chunks", $"chunk_{_chunkCounter:00000}.txt"),
-					Encoding.UTF8, 
-					new FileStreamOptions
-					{
-						BufferSize = 1 << 22, 
-						Mode = FileMode.Create, 
-						Access = FileAccess.Write
-					});
-				Interlocked.Increment(ref _chunkCounter);
-						
-				foreach (var line in records)
-				{
-					writer.WriteLine(chunk.Span.Slice(line.LineOffset, line.LineLength));
-				}
-				Console.WriteLine(sb.Append($", file written in {sw.ElapsedMilliseconds} ms"));
+				_sortedChunks[i] = null;
+				element.ChunkRank--;
+				Console.WriteLine($"reposted chunk with new rank {element.ChunkRank}, i={i}");
+				MergeChunks(element);
+			}
+
+			element = _sortedChunks[0];
+			if (element is not null)
+			{
+				WriteChunks(element);
 			}
 		}
 	}
 
+	private void MergeChunks(SortedChunk sortedChunk)
+	{
+		SortedChunk? second;
+		lock (_lock)
+		{
+			second = _sortedChunks[sortedChunk.ChunkRank];
+			if (second is null)
+			{
+				_sortedChunks[sortedChunk.ChunkRank] = sortedChunk;
+				Console.WriteLine($"stored chunk of rank {sortedChunk.ChunkRank}      {string.Join(", ", _sortedChunks.Select(c => c is null?"0":"1" ))}");
+				return;
+			}
+
+			_sortedChunks[sortedChunk.ChunkRank] = null;
+		}
+		
+		Console.WriteLine($"merging chanks of rank {sortedChunk.ChunkRank}");
+		if (sortedChunk.ChunkRank == 0)
+		{
+			// cant merge this to memory, write result directly to file
+			
+			WriteChunks(sortedChunk, second);
+			return;
+		}
+
+		var newSorted = new SortedChunk(sortedChunk, second);
+		MergeChunks(newSorted);
+	}
+
+	private void WriteChunks(SortedChunk chankA, SortedChunk? chankB = null)
+	{
+		var sw = Stopwatch.StartNew();
+		string filename;
+		lock (_fileCounterLock)
+		{
+			filename = $"large_chunk_{_fileChunkCounter:00000}.txt";
+			_fileChunkCounter++;
+		}
+
+		using var writer = new StreamWriter(
+			Path.Combine("Chunks", filename),
+			Encoding.UTF8, 
+			new FileStreamOptions
+			{
+				BufferSize = 1 << 22, 
+				Mode = FileMode.Create, 
+				Access = FileAccess.Write
+			});
+		
+		if (chankB is not null)
+		{
+			// merge sorted and second directly to file
+			chankA.WriteOnMerge(chankB, writer, 8 * 1024 * 1024);
+			
+			// todo: finally
+			chankA.Dispose();
+			chankB.Dispose();
+		}
+		else
+		{
+			chankA.WriteChunk(writer);
+			chankA.Dispose();
+		}
+		
+		Console.WriteLine($"Chunk written to file {filename} in {sw.ElapsedMilliseconds} ms");
+	}
+
 	// todo: optimize
-	private int dataLengthToRank(int length)
+	public int DataLengthToRank(int length)
 	{
 		var rank = 0;
 		var maxLength = fileMaxLength;
-		while (length < maxLength/2 || rank < 5)
+		while (length < maxLength/2 && rank < 5)
 		{
 			rank++;
 			maxLength /= 2;
