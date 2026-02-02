@@ -17,12 +17,13 @@ using FileGenerator.Generators;
 
 //Console.WriteLine(summary.Table.ToString());
 
-var fileSizeMb = 1024 * 4;
-var generateNewFile = false; //true;
+var fileSizeMb = 1024 * 20;
+var generateNewFile = false;
 
 var bufferSizeB = 1024 * 1024;
-var wrokerCount = Environment.ProcessorCount - 2;
-var chunkSizeB = 128 * 1024 * 1024;
+var wrokerCount = 4; //Environment.ProcessorCount - 2;
+var chunkSizeB = 250 * 1024 * 1024;
+var mergeMaxStoredSizeMB = 2 * 1000;
 
 var sw = Stopwatch.StartNew();
 
@@ -38,7 +39,7 @@ else
 }
 
 
-var sorter = new LargeFileSorter(bufferSizeB, chunkSizeB, wrokerCount, lineMaxLength:113);
+var sorter = new LargeFileSorter(bufferSizeB, chunkSizeB, wrokerCount, lineMaxLength:113, fileMaxLength:mergeMaxStoredSizeMB * 1024 * 1024);
 
 /*
 sw.Restart();

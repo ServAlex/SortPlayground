@@ -12,17 +12,11 @@ public class LargeFileSorter(
 	int workerCount = 2,
 	int lineMaxLength = 10 + 2 + 100 + 1,
 	int empiricalConservativeLineLength = 50,
-	int fileMaxLength = int.MaxValue/2/2)
+	int fileMaxLength = int.MaxValue/2)
 {
 	private int _chunkCounter = 0; 
 	private int _fileChunkCounter = 0; 
 	
-	private Channel<Memory<char>> _channel = Channel.CreateBounded<Memory<char>>(
-		new BoundedChannelOptions(1)
-		{
-			SingleWriter = true
-		});
-
 	private readonly SortedChunk?[] _sortedChunks = new SortedChunk?[6];
 	private readonly Lock _lock = new();
 	private readonly Lock _fileCounterLock = new();
@@ -237,7 +231,7 @@ public class LargeFileSorter(
 	}
 
 	// todo: optimize
-	public int DataLengthToRank(int length)
+	private int DataLengthToRank(int length)
 	{
 		var rank = 0;
 		var maxLength = fileMaxLength;
