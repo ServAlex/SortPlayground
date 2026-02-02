@@ -8,11 +8,13 @@ namespace FileGenerator.FileSorter;
 
 public class LargeFileSorter(
 	int bufferSize,
+	int workerCount,
+	int queueLength,
 	int chunkSize = 1024 * 1024,
-	int workerCount = 2,
 	int lineMaxLength = 10 + 2 + 100 + 1,
 	int empiricalConservativeLineLength = 50,
-	int fileMaxLength = int.MaxValue/2)
+	int fileMaxLength = int.MaxValue/2,
+	int memoryBudgetMb = 16 * 1024)
 {
 	private int _chunkCounter = 0; 
 	private int _fileChunkCounter = 0; 
@@ -23,9 +25,8 @@ public class LargeFileSorter(
 
 	public async Task SortFile(string fileName = "test.txt")
 	{
-		var channelCapacity = workerCount;
 		var channel = Channel.CreateBounded<CharChunk>(
-			new BoundedChannelOptions(channelCapacity)
+			new BoundedChannelOptions(queueLength)
 			{
 				SingleWriter = true
 			});
@@ -42,7 +43,7 @@ public class LargeFileSorter(
 		// worker tasks
 		tasks.AddRange( Enumerable
 				.Range(0, workerCount)
-				.Select(_ => Task.Run(async () => await WorkerAsync(channel, channelCapacity)))
+				.Select(_ => Task.Run(async () => await WorkerAsync(channel, queueLength)))
 			);
 		
 		await Task.WhenAll(tasks);
@@ -52,8 +53,6 @@ public class LargeFileSorter(
 	private async Task ReadAsync(string fileName, Channel<CharChunk> channel)
 	{
 		Console.WriteLine("Started reading");
-
-		var charArrayPool = ArrayPool<char>.Shared;
 
 		using var reader = new StreamReader(
 			fileName,
@@ -65,7 +64,7 @@ public class LargeFileSorter(
 				Options = FileOptions.SequentialScan
 			});
 
-		var chunk = new CharChunk(chunkSize, charArrayPool);
+		var chunk = new CharChunk(chunkSize);
 		var isReadToEnd = false;
 
 		do
@@ -90,13 +89,22 @@ public class LargeFileSorter(
 			}
 				
 			// init new chunk with end of previous one and set offset
-			var newChunk = new CharChunk(chunkSize, charArrayPool);
+			var newChunk = new CharChunk(chunkSize);
 			if (chunk.FilledLength < chunkSize)
 			{
 				newChunk.StartOffset = chunkSize - chunk.FilledLength;
 				chunk.Span[(lineEndIndex+1)..].CopyTo(newChunk.Span[..newChunk.StartOffset]);
 			}
 			chunk = newChunk;
+
+			var usedMemoryKb = GC.GetTotalMemory(true) / 1024;
+			
+			while ((float)usedMemoryKb/1024 > memoryBudgetMb*0.85)
+			{
+				Console.WriteLine($"--------------------- used memory: {(float)usedMemoryKb / 1024 / 1024:F1} GB");
+				await Task.Delay(1000);
+				usedMemoryKb = GC.GetTotalMemory(true) / 1024;
+			}
 
 		} while (!isReadToEnd);
 
@@ -216,15 +224,10 @@ public class LargeFileSorter(
 		{
 			// merge sorted and second directly to file
 			chankA.WriteOnMerge(chankB, writer, 8 * 1024 * 1024);
-			
-			// todo: finally
-			chankA.Dispose();
-			chankB.Dispose();
 		}
 		else
 		{
 			chankA.WriteChunk(writer);
-			chankA.Dispose();
 		}
 		
 		Console.WriteLine($"Chunk written to file {filename} in {sw.ElapsedMilliseconds} ms");

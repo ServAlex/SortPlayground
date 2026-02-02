@@ -1,6 +1,6 @@
 namespace FileGenerator.FileSorter;
 
-public class SortedChunk: IDisposable
+public class SortedChunk
 {
 	private readonly Line[] _lines;
 	public readonly int LinesCount;
@@ -118,11 +118,5 @@ public class SortedChunk: IDisposable
 			return sequenceCompare;
 
 		return a.Number.CompareTo(b.Number);
-	}
-	
-	public void Dispose()
-	{
-		foreach (var chunk in _subChunks)
-			chunk.Dispose();
 	}
 }

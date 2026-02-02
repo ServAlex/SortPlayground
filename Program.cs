@@ -22,8 +22,9 @@ var generateNewFile = false;
 
 var bufferSizeB = 1024 * 1024;
 var wrokerCount = 4; //Environment.ProcessorCount - 2;
+var queueLength = 6;
 var chunkSizeB = 250 * 1024 * 1024;
-var mergeMaxStoredSizeMB = 2 * 1000;
+var mergeMaxStoredSizeMb = 2 * 1000;
 
 var sw = Stopwatch.StartNew();
 
@@ -38,32 +39,7 @@ else
 	Console.WriteLine("using old file");
 }
 
-
-var sorter = new LargeFileSorter(bufferSizeB, chunkSizeB, wrokerCount, lineMaxLength:113, fileMaxLength:mergeMaxStoredSizeMB * 1024 * 1024);
-
-/*
-sw.Restart();
-reader.ReadFullFile("test.txt");
-Console.WriteLine($"read in {sw.ElapsedMilliseconds} ms");
-*/
-/*
-sw.Restart();
-reader.ReadBlocked("test.txt");
-Console.WriteLine($"read blocked in {sw.ElapsedMilliseconds} ms");
-*/
-/*
-sw.Restart();
-reader.ReadBlockedSequentialLargeBuf("test.txt");
-Console.WriteLine($"read blocked large buf in {sw.ElapsedMilliseconds} ms");
-
-sw.Restart();
-await reader.ReadToChannel("test.txt");
-Console.WriteLine($"read to channel in {sw.ElapsedMilliseconds} ms");
-
-sw.Restart();
-await reader.ReadToChannelSync("test.txt");
-Console.WriteLine($"sync read to channel in {sw.ElapsedMilliseconds} ms");
-*/
+var sorter = new LargeFileSorter(bufferSizeB, wrokerCount, queueLength, chunkSizeB, lineMaxLength:113, fileMaxLength:mergeMaxStoredSizeMb * 1024 * 1024);
 
 sw.Restart();
 await sorter.SortFile("test.txt");
