@@ -135,7 +135,7 @@ public class LargeFileSorter(
 			sw.Restart();
 			Interlocked.Increment(ref _chunkCounter);
 			
-			var rank = DataLengthToRank(chunk.FilledLength);
+			var rank = DataLengthToRank(chunk.FilledLength, fileMaxLength);
 			SortedChunk sortedChunk = new SortedChunk(records, chunk, rank, count);
 
 			// merge
@@ -237,10 +237,9 @@ public class LargeFileSorter(
 	}
 
 	// todo: optimize
-	private int DataLengthToRank(int length)
+	public int DataLengthToRank(int length, int maxLength)
 	{
 		var rank = 0;
-		var maxLength = fileMaxLength;
 		while (length < maxLength/2 && rank < 5)
 		{
 			rank++;
