@@ -1,0 +1,6 @@
+{
+  "LargeFileSorterOptions": {
+    "QueueLength": 6,
+    "MergeWorkerCount": 2
+  }
+}

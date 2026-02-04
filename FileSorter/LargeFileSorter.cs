@@ -5,44 +5,59 @@ using FileGenerator.FileSorter.MergeFiles;
 
 namespace FileGenerator.FileSorter;
 
-public class LargeFileSorter(
-	int bufferSize,
-	int sortWorkerCount,
-	int mergeWorkerCount,
-	int queueLength,
-	int chunkSize = 1024 * 1024,
-	int empiricalConservativeLineLength = 50,
-	int fileMaxLength = int.MaxValue / 2,
-	int memoryBudgetMb = 16 * 1024)
+public class LargeFileSorter
 {
 	private int _chunkCounter; 
 	private int _fileChunkCounter; 
+	
+	private readonly int _bufferSize;
+	private readonly int _sortWorkerCount;
+	private readonly int _mergeWorkerCount;
+	private readonly int _queueLength;
+	private readonly int _chunkSize;
+	private readonly int _fileMaxLengthMb;
+	private readonly int _memoryBudgetMb;
+	private readonly int _empiricalConservativeLineLength;
 	
 	private readonly SortedChunk?[] _sortedChunks = new SortedChunk?[6];
 	private readonly Lock _sortedChunksLock = new();
 	private readonly Lock _fileCounterLock = new();
 
-	private readonly Channel<CharChunk> _sortChannel = Channel.CreateBounded<CharChunk>(
-		new BoundedChannelOptions(queueLength)
-		{
-			SingleWriter = true,
-			FullMode = BoundedChannelFullMode.Wait
-		});
+	private readonly Channel<CharChunk> _sortChannel;
+	private readonly Channel<SortedChunk> _mergeInMemoryChannel ;
+	private readonly Channel<(SortedChunk, SortedChunk?)> _mergeToFileChannel;
 
-	private readonly Channel<SortedChunk> _mergeInMemoryChannel = Channel.CreateBounded<SortedChunk>(
-		new BoundedChannelOptions(1)
-		{
-			SingleReader = true,
-			FullMode = BoundedChannelFullMode.Wait
-		});
-
-	private readonly Channel<(SortedChunk, SortedChunk?)> _mergeToFileChannel = Channel.CreateBounded<(SortedChunk, SortedChunk?)>(
-		new BoundedChannelOptions(1)
-		{
-			SingleWriter = true,
-			SingleReader = true,
-			FullMode = BoundedChannelFullMode.Wait
-		});
+	public LargeFileSorter(LargeFileSorterOptions options)
+	{
+		_bufferSize = options.BufferSize;
+		_sortWorkerCount = options.SortWorkerCount;
+		_mergeWorkerCount = options.MergeWorkerCount;
+		_queueLength = options.QueueLength;
+		_chunkSize = options.ChunkSize;
+		_fileMaxLengthMb = options.FileMaxLengthMb;
+		_memoryBudgetMb = options.MemoryBudgetMb;
+		_empiricalConservativeLineLength = options.EmpiricalConservativeLineLength;
+		
+		_sortChannel = Channel.CreateBounded<CharChunk>(
+			new BoundedChannelOptions(_queueLength)
+			{
+				SingleWriter = true,
+				FullMode = BoundedChannelFullMode.Wait
+			});
+		_mergeInMemoryChannel = Channel.CreateBounded<SortedChunk>(
+			new BoundedChannelOptions(1)
+			{
+				SingleReader = true,
+				FullMode = BoundedChannelFullMode.Wait
+			});
+		_mergeToFileChannel = Channel.CreateBounded<(SortedChunk, SortedChunk?)>(
+			new BoundedChannelOptions(1)
+			{
+				SingleWriter = true,
+				SingleReader = true,
+				FullMode = BoundedChannelFullMode.Wait
+			});
+	}
 
 	public async Task SortFile(string fileName = "test.txt")
 	{
@@ -62,9 +77,9 @@ public class LargeFileSorter(
 		tasks.Add(
 			Task.WhenAll(
 					Enumerable
-						.Range(0, sortWorkerCount)
+						.Range(0, _sortWorkerCount)
 						.Select(_ =>
-							Task.Run(async () => await SortChunkAsync(_sortChannel, queueLength, _mergeInMemoryChannel)))
+							Task.Run(async () => await SortChunkAsync(_sortChannel, _queueLength, _mergeInMemoryChannel)))
 				)
 				.ContinueWith(_ => _mergeInMemoryChannel.Writer.Complete())
 		);
@@ -74,7 +89,7 @@ public class LargeFileSorter(
 		tasks.Add(
 			Task.WhenAll(
 					Enumerable
-						.Range(0, mergeWorkerCount)
+						.Range(0, _mergeWorkerCount)
 						.Select(_ =>
 							Task.Run(async () => await MergeInMemoryAsync(_mergeInMemoryChannel, _mergeToFileChannel)))
 				)
@@ -88,7 +103,7 @@ public class LargeFileSorter(
 		
 		Log($"Split to sorted files in: {sw.ElapsedMilliseconds} ms");
 		
-		SortedFilesMerger.MergeSortedFiles("Chunks", "sorted.txt", 8 * bufferSize, 8 * bufferSize);
+		SortedFilesMerger.MergeSortedFiles("Chunks", "sorted.txt", 8 * _bufferSize, 8 * _bufferSize);
 	}
 
 	private async Task ReadInputFileAsync(string fileName, Channel<CharChunk> sortChannel)
@@ -101,11 +116,11 @@ public class LargeFileSorter(
 			true,
 			new FileStreamOptions
 			{
-				BufferSize = bufferSize,
+				BufferSize = _bufferSize,
 				Options = FileOptions.SequentialScan
 			});
 
-		var chunk = new CharChunk(chunkSize);
+		var chunk = new CharChunk(_chunkSize);
 		var isReadToEnd = false;
 
 		do
@@ -130,16 +145,16 @@ public class LargeFileSorter(
 			}
 				
 			// init new chunk with end of previous one and set offset
-			var newChunk = new CharChunk(chunkSize);
-			if (chunk.FilledLength < chunkSize)
+			var newChunk = new CharChunk(_chunkSize);
+			if (chunk.FilledLength < _chunkSize)
 			{
-				newChunk.StartOffset = chunkSize - chunk.FilledLength;
+				newChunk.StartOffset = _chunkSize - chunk.FilledLength;
 				chunk.Span[(lineEndIndex+1)..].CopyTo(newChunk.Span[..newChunk.StartOffset]);
 			}
 			chunk = newChunk;
 
 			var usedMemoryKb = GC.GetTotalMemory(true) / 1024;
-			while ((float)usedMemoryKb/1024 > memoryBudgetMb*0.85)
+			while ((float)usedMemoryKb/1024 > _memoryBudgetMb*0.85)
 			{
 				Log($"--------------------- used memory: {(float)usedMemoryKb / 1024 / 1024:F1} GB");
 				await Task.Delay(1000);
@@ -161,7 +176,7 @@ public class LargeFileSorter(
 		{
 			Stopwatch sw = Stopwatch.StartNew();
 			// parse
-			var estimatedLines = chunk.FilledLength / empiricalConservativeLineLength;
+			var estimatedLines = chunk.FilledLength / _empiricalConservativeLineLength;
 			var records = new Line[estimatedLines];
 					
 			var count = ParseLines(chunk.Span[..chunk.FilledLength], ref records);
@@ -173,7 +188,7 @@ public class LargeFileSorter(
 			Log($"sorted chunk {_chunkCounter:0000} with {count} lines in {sw.ElapsedMilliseconds} ms");
 			Interlocked.Increment(ref _chunkCounter);
 			
-			var rank = DataLengthToRank(chunk.FilledLength, fileMaxLength);
+			var rank = DataLengthToRank(chunk.FilledLength, _fileMaxLengthMb * 1024 * 1024);
 			SortedChunk sortedChunk = new SortedChunk(records, chunk, rank, count);
 
 			// merge
@@ -194,10 +209,10 @@ public class LargeFileSorter(
 			sb.Append(' ', maxTextLength - sb.Length);
 
 		sb.Append(
-			$"SQ:{_sortChannel.Reader.Count}/{queueLength} MQ:{_mergeInMemoryChannel.Reader.Count}/{1} MFQ:{_mergeToFileChannel.Reader.Count}/{1}");
+			$"SQ:{_sortChannel.Reader.Count}/{_queueLength} MQ:{_mergeInMemoryChannel.Reader.Count}/{1} MFQ:{_mergeToFileChannel.Reader.Count}/{1}");
 		
 		var usedMemoryKb = GC.GetTotalMemory(true) / 1024;
-		sb.Append($" mem:{(float)usedMemoryKb / 1024 / 1024:F1}/{memoryBudgetMb / 1024} GB");
+		sb.Append($" mem:{(float)usedMemoryKb / 1024 / 1024:F1}/{_memoryBudgetMb / 1024} GB");
 		
 		Console.WriteLine(sb);
 	}
