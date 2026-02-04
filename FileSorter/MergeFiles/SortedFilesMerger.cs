@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 
 namespace FileGenerator.FileSorter.MergeFiles;
@@ -19,7 +20,8 @@ public class SortedFilesMerger
 				Mode = FileMode.Create, 
 				Access = FileAccess.Write
 			});
-		
+
+		var sw = Stopwatch.StartNew();
 		Console.WriteLine($"Merging to final file {destinationFileName}");
 		
 		var files = new DirectoryInfo(directoryName).GetFiles();
@@ -57,7 +59,7 @@ public class SortedFilesMerger
 			}
 		}
 		
-		Console.WriteLine($"total lines written to final file {totalLines}");
+		Console.WriteLine($"Total lines written to final file {totalLines}, time: {sw.ElapsedMilliseconds} ms");
 		return totalLines;
 	}
 }

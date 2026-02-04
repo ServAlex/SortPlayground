@@ -21,7 +21,7 @@ var fileSizeMb = 1024 * 20;
 var generateNewFile = false;
 
 var bufferSizeB = 1024 * 1024;
-var sortWorkerCount = 4; //Environment.ProcessorCount - 2;
+var sortWorkerCount = 6; //Environment.ProcessorCount - 2;
 var mergeWorkerCount = 2;
 var queueLength = 6;
 var chunkSizeB = 63 * 1024 * 1024;
