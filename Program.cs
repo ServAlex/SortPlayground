@@ -1,28 +1,20 @@
-﻿
-using System;
-using System.Diagnostics;
-using BenchmarkDotNet.Running;
-using FileGenerator;
+﻿using System.Diagnostics;
 using FileGenerator.FileSorter;
-using FileGenerator.FileWriterBenchmark;
-using FileGenerator.FixedLengthGenerators;
 using FileGenerator.FullGeneratorBenchmark;
-using FileGenerator.Generators;
 
 //var summary = BenchmarkRunner.Run<GenerationBenchmark>();
 //var summary = BenchmarkRunner.Run<GivenLengthLineGeneratorBenchmark>();
-// var summary = BenchmarkRunner.Run<ChunkFileWriterBenchmark>();
+//var summary = BenchmarkRunner.Run<ChunkFileWriterBenchmark>();
 //var summary = BenchmarkRunner.Run<MultiGbFileWriterBenchmark>();
 //var summary = BenchmarkRunner.Run<FullGeneratorBenchmark>();
 
-//Console.WriteLine(summary.Table.ToString());
 
 var fileSizeMb = 1024 * 20;
 var generateNewFile = false;
 
 var bufferSizeB = 1024 * 1024;
-var sortWorkerCount = 6; //Environment.ProcessorCount - 2;
 var mergeWorkerCount = 2;
+var sortWorkerCount = Environment.ProcessorCount - 2 - mergeWorkerCount;
 var queueLength = 6;
 var chunkSizeB = 63 * 1024 * 1024;
 var mergeMaxStoredSizeMb = 2 * 1000;
@@ -49,8 +41,6 @@ var sorter = new LargeFileSorter(
 	chunkSize: chunkSizeB,
 	fileMaxLength: mergeMaxStoredSizeMb * 1024 * 1024,
 	memoryBudgetMb: memoryBudgetMb);
-
-//Console.WriteLine(sorter.DataLengthToRank(500 * (1 << 20), 2 * 1000 * (1 << 20)));
 
 
 sw.Restart();
