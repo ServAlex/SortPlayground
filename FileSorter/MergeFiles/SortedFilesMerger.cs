@@ -20,6 +20,8 @@ public class SortedFilesMerger
 				Access = FileAccess.Write
 			});
 		
+		Console.WriteLine($"Merging to final file {destinationFileName}");
+		
 		var files = new DirectoryInfo(directoryName).GetFiles();
 		var readers = files.Select(f =>
 			new SortedFileReader(

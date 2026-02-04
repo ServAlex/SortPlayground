@@ -21,10 +21,12 @@ var fileSizeMb = 1024 * 20;
 var generateNewFile = false;
 
 var bufferSizeB = 1024 * 1024;
-var wrokerCount = 4; //Environment.ProcessorCount - 2;
+var sortWorkerCount = 4; //Environment.ProcessorCount - 2;
+var mergeWorkerCount = 2;
 var queueLength = 6;
 var chunkSizeB = 63 * 1024 * 1024;
 var mergeMaxStoredSizeMb = 2 * 1000;
+var memoryBudgetMb = 16 * 1024;
 
 var sw = Stopwatch.StartNew();
 
@@ -39,7 +41,14 @@ else
 	Console.WriteLine("using old file");
 }
 
-var sorter = new LargeFileSorter(bufferSizeB, wrokerCount, queueLength, chunkSizeB, lineMaxLength:113, fileMaxLength:mergeMaxStoredSizeMb * 1024 * 1024);
+var sorter = new LargeFileSorter(
+	bufferSize: bufferSizeB,
+	sortWorkerCount: sortWorkerCount,
+	mergeWorkerCount: mergeWorkerCount,
+	queueLength: queueLength,
+	chunkSize: chunkSizeB,
+	fileMaxLength: mergeMaxStoredSizeMb * 1024 * 1024,
+	memoryBudgetMb: memoryBudgetMb);
 
 //Console.WriteLine(sorter.DataLengthToRank(500 * (1 << 20), 2 * 1000 * (1 << 20)));
 
