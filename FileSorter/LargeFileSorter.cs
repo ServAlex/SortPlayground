@@ -29,13 +29,13 @@ public class LargeFileSorter
 
 	public LargeFileSorter(LargeFileSorterOptions options)
 	{
-		_bufferSize = options.BufferSize;
+		_bufferSize = options.BufferSizeMb * 1024 * 1024;
 		_sortWorkerCount = options.SortWorkerCount;
 		_mergeWorkerCount = options.MergeWorkerCount;
 		_queueLength = options.QueueLength;
-		_chunkSize = options.ChunkSize;
+		_chunkSize = options.ChunkSizeMb * 1024 * 1024;
 		_fileMaxLengthMb = options.FileMaxLengthMb;
-		_memoryBudgetMb = options.MemoryBudgetMb;
+		_memoryBudgetMb = options.MemoryBudgetGb * 1024;
 		_empiricalConservativeLineLength = options.EmpiricalConservativeLineLength;
 		
 		_sortChannel = Channel.CreateBounded<CharChunk>(

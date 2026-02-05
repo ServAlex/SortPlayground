@@ -1,9 +1,7 @@
 ﻿using System.Diagnostics;
-using System.Reflection;
 using FileGenerator.FileSorter;
 using FileGenerator.FullGeneratorBenchmark;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.FileProviders;
 
 //var summary = BenchmarkRunner.Run<GenerationBenchmark>();
 //var summary = BenchmarkRunner.Run<GivenLengthLineGeneratorBenchmark>();
@@ -11,28 +9,16 @@ using Microsoft.Extensions.FileProviders;
 //var summary = BenchmarkRunner.Run<MultiGbFileWriterBenchmark>();
 //var summary = BenchmarkRunner.Run<FullGeneratorBenchmark>();
 
-
-var asm = Assembly.GetExecutingAssembly();
 var config = new ConfigurationBuilder()
-	.AddJsonFile(new EmbeddedFileProvider(asm), "config.json", false, false)
-	//.AddJsonFile("config.json")
+	.AddJsonFile("appsettings.json")
 	.Build();
 
-LargeFileSorterOptions options = new();
-config.GetSection(nameof(LargeFileSorterOptions)).Bind(options);
-
-
-Console.WriteLine($"sort options: {options}");
-
-var fileSizeMb = 1024 * 20;
-var generateNewFile = false;
-
-options.BufferSize = 1024 * 1024;
+LargeFileSorterOptions options = config.GetSection(nameof(LargeFileSorterOptions)).Get<LargeFileSorterOptions>() 
+                                 ?? throw new InvalidOperationException("Config not found");
 options.SortWorkerCount = Environment.ProcessorCount - 2 - options.MergeWorkerCount;
-options.ChunkSize = 63 * 1024 * 1024;
-options.FileMaxLengthMb = 2 * 1000;
-options.MemoryBudgetMb = 16 * 1024;
 
+const bool generateNewFile = false;
+const int fileSizeMb = 1024 * 20;
 var sw = Stopwatch.StartNew();
 
 if (generateNewFile)

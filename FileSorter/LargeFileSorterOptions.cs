@@ -2,12 +2,12 @@ namespace FileGenerator.FileSorter;
 
 public class LargeFileSorterOptions
 {
-	public int BufferSize;
-	public int SortWorkerCount;
-	public int MergeWorkerCount;
-	public int QueueLength;
-	public int ChunkSize;
-	public int FileMaxLengthMb;
-	public int MemoryBudgetMb;
-	public int EmpiricalConservativeLineLength = 50;
+	public int BufferSizeMb { get; set; }
+	public int SortWorkerCount { get; set; }
+	public int MergeWorkerCount { get; set; }
+	public int QueueLength { get; set; }
+	public int ChunkSizeMb { get; set; }
+	public int FileMaxLengthMb { get; set; }
+	public int MemoryBudgetGb { get; set; }
+	public int EmpiricalConservativeLineLength { get; set; } = 50;
 }
