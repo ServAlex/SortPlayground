@@ -1,31 +1,24 @@
-﻿
-using System;
-using System.Diagnostics;
-using BenchmarkDotNet.Running;
-using FileGenerator;
+﻿using System.Diagnostics;
 using FileGenerator.FileSorter;
-using FileGenerator.FileWriterBenchmark;
-using FileGenerator.FixedLengthGenerators;
 using FileGenerator.FullGeneratorBenchmark;
-using FileGenerator.Generators;
+using Microsoft.Extensions.Configuration;
 
 //var summary = BenchmarkRunner.Run<GenerationBenchmark>();
 //var summary = BenchmarkRunner.Run<GivenLengthLineGeneratorBenchmark>();
-// var summary = BenchmarkRunner.Run<ChunkFileWriterBenchmark>();
+//var summary = BenchmarkRunner.Run<ChunkFileWriterBenchmark>();
 //var summary = BenchmarkRunner.Run<MultiGbFileWriterBenchmark>();
 //var summary = BenchmarkRunner.Run<FullGeneratorBenchmark>();
 
-//Console.WriteLine(summary.Table.ToString());
+var config = new ConfigurationBuilder()
+	.AddJsonFile("appsettings.json")
+	.Build();
 
-var fileSizeMb = 1024 * 20;
-var generateNewFile = false;
+var options = config.GetSection(nameof(LargeFileSorterOptions)).Get<LargeFileSorterOptions>() 
+              ?? throw new InvalidOperationException("Config not found");
+options.SortWorkerCount = Environment.ProcessorCount - 2 - options.MergeWorkerCount;
 
-var bufferSizeB = 1024 * 1024;
-var wrokerCount = 4; //Environment.ProcessorCount - 2;
-var queueLength = 6;
-var chunkSizeB = 63 * 1024 * 1024;
-var mergeMaxStoredSizeMb = 2 * 1000;
-
+const bool generateNewFile = false;
+const int fileSizeMb = 1024 * 20;
 var sw = Stopwatch.StartNew();
 
 if (generateNewFile)
@@ -39,21 +32,11 @@ else
 	Console.WriteLine("using old file");
 }
 
-var sorter = new LargeFileSorter(bufferSizeB, wrokerCount, queueLength, chunkSizeB, lineMaxLength:113, fileMaxLength:mergeMaxStoredSizeMb * 1024 * 1024);
-
-//Console.WriteLine(sorter.DataLengthToRank(500 * (1 << 20), 2 * 1000 * (1 << 20)));
-
+var sorter = new LargeFileSorter(options); 
 
 sw.Restart();
 await sorter.SortFile("test.txt");
 Console.WriteLine($"direct sync read to channel in {sw.ElapsedMilliseconds} ms");
 
-/*
-var gcMemoryInfo = GC.GetGCMemoryInfo();
-var installedMemoryKb = gcMemoryInfo.TotalAvailableMemoryBytes / 1024;
-var usedMemoryKb = GC.GetTotalMemory(true) / 1024;
-var availableMemoryKb = installedMemoryKb - usedMemoryKb;
 
-Console.WriteLine("");
-Console.WriteLine($"used memory: {usedMemoryKb} KB, available memory: {availableMemoryKb} KB");
-*/
+//Console.WriteLine($"max rank {sorter.MaxRank((1 << 30) - 1 + (1 << 30), 63 * (1 << 20))}");
