@@ -180,7 +180,7 @@ public class LargeFileSorter
 			var estimatedLines = chunk.FilledLength / _empiricalConservativeLineLength;
 			var records = new Line[estimatedLines];
 					
-			var count = ParseLines(chunk.Span[..chunk.FilledLength], ref records);
+			var count = Line.ParseLines(chunk.Span[..chunk.FilledLength], ref records);
 					
 			// sort
 			var comparer = new LineComparer(chunk.Buffer);
@@ -308,7 +308,7 @@ public class LargeFileSorter
 			if (chunkB is not null)
 			{
 				// merge 2 chunks directly to file
-				chunkA.MergeToStream(chunkB, writer, 8 * 1024 * 1024);
+				chunkA.MergeToStream(chunkB, writer, 1024 * 1024);
 			}
 			else
 			{
@@ -323,47 +323,4 @@ public class LargeFileSorter
 	{
 		return (int)Math.Floor(Math.Log2((double)maxLength / chunkSize));
 	}
-
-	static int ParseLines(ReadOnlySpan<char> data, ref Line[] records)
-	{
-		int count = 0;
-		int i = 0;
-
-		while (i < data.Length)
-		{
-			if (count == records.Length)
-				Array.Resize(ref records, records.Length * 2);
-
-			int lineStart = i;
-
-			int number = 0;
-			while (data[i] != '.')
-				number = number * 10 + (data[i++] - '0');
-
-			i++; // '.'
-			if (data[i] == ' ') i++;
-
-			int textStart = i;
-
-			while (i < data.Length && data[i] != '\n')
-				i++;
-
-			int lineEnd = i;
-			int lineLength = lineEnd - lineStart;
-			int textLength = lineEnd - textStart;
-
-			ref var r = ref records[count++];
-			r.Number = number;
-			r.LineOffset = lineStart;
-			r.StringOffsetFromLine = (short)(textStart - lineStart);
-			r.LineLength = (short)lineLength;
-			r.StringLength = (short)textLength;
-			r.ChunkIndex = 0;
-			r.Prefix = Line.EncodeAscii8(data.Slice(textStart, textLength));
-
-			i++; // '\n'
-		}
-
-		return count;
-	}	
 }

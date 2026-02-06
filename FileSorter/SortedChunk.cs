@@ -21,7 +21,7 @@ public class SortedChunk
 		_linesCount = chunkA._linesCount +  chunkB._linesCount;
 		ChunkRank = Math.Min(chunkA.ChunkRank, chunkB.ChunkRank) - 1;
 		_subChunks = [..chunkA._subChunks, ..chunkB._subChunks];
-		var chunksOffset = (short)chunkA._subChunks.Length;
+		var subChunksCountA = (short)chunkA._subChunks.Length;
 		_lines = new Line[_linesCount];
 
 		var i = 0;
@@ -40,7 +40,7 @@ public class SortedChunk
 			}
 			else
 			{
-				_lines[k++] = b with {ChunkIndex = (short)(b.ChunkIndex + chunksOffset)};
+				_lines[k++] = b with {SubChunkIndex = (short)(b.SubChunkIndex + subChunksCountA)};
 				j++;
 			}
 		}
@@ -65,7 +65,7 @@ public class SortedChunk
 			{
 				i++;
 				if(a.LineLength > 0)
-					stream.WriteLine(chunkA._subChunks[a.ChunkIndex].Span.Slice(a.LineOffset, a.LineLength));
+					stream.WriteLine(chunkA._subChunks[a.SubChunkIndex].Span.Slice(a.LineOffset, a.LineLength));
 				
 				/*
 				todo: write to bubber and flush it
@@ -75,7 +75,7 @@ public class SortedChunk
 			{
 				j++;
 				if(b.LineLength > 0)
-					stream.WriteLine(chunkB._subChunks[b.ChunkIndex].Span.Slice(b.LineOffset, b.LineLength));
+					stream.WriteLine(chunkB._subChunks[b.SubChunkIndex].Span.Slice(b.LineOffset, b.LineLength));
 			}
 		}
 
@@ -89,7 +89,7 @@ public class SortedChunk
 		{
 			ref readonly var line = ref _lines[i];
 			if(line.LineLength > 0)
-				writer.WriteLine(_subChunks[line.ChunkIndex].Span.Slice(line.LineOffset, line.LineLength));
+				writer.WriteLine(_subChunks[line.SubChunkIndex].Span.Slice(line.LineOffset, line.LineLength));
 		}
 	}
 
@@ -99,8 +99,8 @@ public class SortedChunk
 		if (prefixComparison != 0)
 			return prefixComparison;
 
-		var spanA = chunkArrayA[a.ChunkIndex] .Buffer.AsSpan(a.LineOffset + a.StringOffsetFromLine, a.StringLength);
-		var spanB = chunkArrayB[b.ChunkIndex] .Buffer.AsSpan(b.LineOffset + b.StringOffsetFromLine, b.StringLength);
+		var spanA = chunkArrayA[a.SubChunkIndex] .Buffer.AsSpan(a.LineOffset + a.StringOffsetFromLine, a.StringLength);
+		var spanB = chunkArrayB[b.SubChunkIndex] .Buffer.AsSpan(b.LineOffset + b.StringOffsetFromLine, b.StringLength);
 
 		var sequenceCompare = spanA.SequenceCompareTo(spanB);
 		if (sequenceCompare != 0)
