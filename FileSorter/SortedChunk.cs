@@ -2,9 +2,10 @@ namespace FileGenerator.FileSorter;
 
 public class SortedChunk
 {
+	public readonly int ChunkRank;
+	
 	private readonly Line[] _lines;
-	public readonly int LinesCount;
-	public int ChunkRank;
+	private readonly int _linesCount;
 	private readonly CharChunk[] _subChunks;
 
 	public SortedChunk(Line[] lines, CharChunk chunk, int chunkRank, int linesCount)
@@ -12,22 +13,22 @@ public class SortedChunk
 		_lines = lines;
 		_subChunks = [chunk];
 		ChunkRank = chunkRank;
-		LinesCount = linesCount;
+		_linesCount = linesCount;
 	}
 
 	public SortedChunk(SortedChunk chunkA,  SortedChunk chunkB)
 	{
-		LinesCount = chunkA.LinesCount +  chunkB.LinesCount;
+		_linesCount = chunkA._linesCount +  chunkB._linesCount;
 		ChunkRank = Math.Min(chunkA.ChunkRank, chunkB.ChunkRank) - 1;
 		_subChunks = [..chunkA._subChunks, ..chunkB._subChunks];
 		var chunksOffset = (short)chunkA._subChunks.Length;
-		_lines = new Line[LinesCount];
+		_lines = new Line[_linesCount];
 
 		var i = 0;
 		var j = 0;
 		var k = 0;
 
-		while (i < chunkA.LinesCount && j < chunkB.LinesCount)
+		while (i < chunkA._linesCount && j < chunkB._linesCount)
 		{
 			ref readonly var a = ref chunkA._lines[i];
 			ref readonly var b = ref chunkB._lines[j];
@@ -45,24 +46,20 @@ public class SortedChunk
 		}
 	}
 
-	public void WriteOnMerge(SortedChunk second, StreamWriter stream, int bufferSize)
+	public void MergeToStream(SortedChunk second, StreamWriter stream, int bufferSize)
 	{
 		var buffer = new char[bufferSize];
 		var bufferSpan = buffer.AsSpan();
-		var offset = 0;
 		var chunkA = this;
 		var chunkB = second;
-		//var chunksOffset = (short)chunkA.subChunks.Length;
 		
 		var i = 0;
 		var j = 0;
-		var k = 0;
 
-		while (i < chunkA.LinesCount && j < chunkB.LinesCount)
+		while (i < chunkA._linesCount && j < chunkB._linesCount)
 		{
 			ref readonly var a = ref chunkA._lines[i];
 			ref readonly var b = ref chunkB._lines[j];
-			//Line currentLine;
 			
 			if (Compare(a, b, chunkA._subChunks, chunkB._subChunks) < 0)
 			{
@@ -72,17 +69,6 @@ public class SortedChunk
 				
 				/*
 				todo: write to bubber and flush it
-				 
-				currentLine = a;
-				
-				stream.WriteLine(
-				   	chunkA.subChunks[currentLine.ChunkIndex].Span
-				   		.Slice(currentLine.LineOffset, currentLine.LineLength));
-				 
-				if (offset + currentLine.LineLength < bufferSize)
-				{
-					//stream.WriteLine(chunk.Span.Slice(line.LineOffset, line.LineLength));
-				}
 				*/
 			}
 			else
@@ -99,7 +85,7 @@ public class SortedChunk
 
 	public void WriteChunk(StreamWriter writer, int startIndex = 0)
 	{
-		for (var i = startIndex; i < LinesCount; i++)
+		for (var i = startIndex; i < _linesCount; i++)
 		{
 			ref readonly var line = ref _lines[i];
 			if(line.LineLength > 0)

@@ -13,8 +13,8 @@ var config = new ConfigurationBuilder()
 	.AddJsonFile("appsettings.json")
 	.Build();
 
-LargeFileSorterOptions options = config.GetSection(nameof(LargeFileSorterOptions)).Get<LargeFileSorterOptions>() 
-                                 ?? throw new InvalidOperationException("Config not found");
+var options = config.GetSection(nameof(LargeFileSorterOptions)).Get<LargeFileSorterOptions>() 
+              ?? throw new InvalidOperationException("Config not found");
 options.SortWorkerCount = Environment.ProcessorCount - 2 - options.MergeWorkerCount;
 
 const bool generateNewFile = false;
@@ -37,3 +37,6 @@ var sorter = new LargeFileSorter(options);
 sw.Restart();
 await sorter.SortFile("test.txt");
 Console.WriteLine($"direct sync read to channel in {sw.ElapsedMilliseconds} ms");
+
+
+//Console.WriteLine($"max rank {sorter.MaxRank((1 << 30) - 1 + (1 << 30), 63 * (1 << 20))}");
