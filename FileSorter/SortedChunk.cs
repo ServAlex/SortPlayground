@@ -44,6 +44,17 @@ public class SortedChunk
 				j++;
 			}
 		}
+		
+		while (i < chunkA._linesCount)
+		{
+			_lines[k++] = chunkA._lines[i++];
+		}
+		
+		while (j < chunkB._linesCount)
+		{
+			ref readonly var b = ref chunkB._lines[j++];
+			_lines[k++] = b with {SubChunkIndex = (short)(b.SubChunkIndex + subChunksCountA)};
+		}
 	}
 
 	public void MergeToStream(SortedChunk second, StreamWriter stream, int bufferSize)
