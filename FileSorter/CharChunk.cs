@@ -1,5 +1,3 @@
-using System.Buffers;
-
 namespace FileGenerator.FileSorter;
 
 public sealed class CharChunk

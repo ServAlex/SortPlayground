@@ -58,8 +58,8 @@ public class SortedFilesMerger
 				pq.Enqueue(reader, priorityKey);
 			}
 		}
-		
+
 		Console.WriteLine($"Total lines written to final file {totalLines}, time: {sw.ElapsedMilliseconds} ms");
-		return totalLines;
+		return writer.BaseStream.Length;
 	}
 }

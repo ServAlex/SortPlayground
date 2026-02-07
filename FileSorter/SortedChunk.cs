@@ -79,7 +79,7 @@ public class SortedChunk
 					stream.WriteLine(chunkA._subChunks[a.SubChunkIndex].Span.Slice(a.LineOffset, a.LineLength));
 				
 				/*
-				todo: write to bubber and flush it
+				todo: write to buffer and flush it
 				*/
 			}
 			else
