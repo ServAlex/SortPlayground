@@ -305,11 +305,11 @@ public class LargeFileSorter
 			if (chunkB is not null)
 			{
 				// merge 2 chunks directly to the file
-				chunkA.MergeToStream(chunkB, writer, 1024 * 1024);
+				chunkA.MergeToStream_BufferedReuse(chunkB, writer, 64 * 1024 * 1024);
 			}
 			else
 			{
-				chunkA.WriteChunk(writer);
+				chunkA.WriteChunk_BufferedReuse(writer, 64 * 1024 * 1024);
 			}
 		
 			Log($"Chunk written to file {filename} in {sw.ElapsedMilliseconds} ms");
