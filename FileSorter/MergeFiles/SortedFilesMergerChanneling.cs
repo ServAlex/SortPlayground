@@ -10,12 +10,6 @@ public class SortedFilesMergerChanneling
 	private long _linesWritten;
 	private long _bytesWritten;
 	private long _bytesRead;
-	private static void Parse(string line, out int number, out string text)
-	{
-		var comma = line.IndexOf('.');
-		number = int.Parse(line.AsSpan(0, comma));
-		text = line[(comma + 1)..];
-	}
 
 	public long MergeSortedFiles(
 		string directoryName,
@@ -172,8 +166,8 @@ public class SortedFilesMergerChanneling
 				continue;
 			_bytesRead += line.Length + lineEndLength;
 			
-			Parse(line, out var num, out var text);
-			pq.Enqueue(new SimpleMergeItem(text, num, i), new SimpleMergeKey(text, num));
+			var newItem = new SimpleMergeItem(line, i);
+			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
 		}
 		
 		
@@ -195,7 +189,7 @@ public class SortedFilesMergerChanneling
 			}
 			else
 			{
-				batch.Add(new SimpleMergeItem(item.Text, item.Number, mergerIndex));
+				batch.Add(new SimpleMergeItem(item, mergerIndex));
 			}
 
 			var reader = readers[item.SourceIndex];
@@ -206,10 +200,8 @@ public class SortedFilesMergerChanneling
 			
 			_bytesRead += next.Length + lineEndLength;
 			
-			Parse(next, out var num, out var text);
-			pq.Enqueue(
-				new SimpleMergeItem(text, num, item.SourceIndex),
-				new SimpleMergeKey(text, num));
+			var newItem = new SimpleMergeItem(next, item.SourceIndex);
+			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
 		}
 
 		if (batch.Count > 0)
@@ -256,19 +248,16 @@ public class SortedFilesMergerChanneling
 				}
 				sw.SpinOnce();
 			}
-			
+			var batch = batches[i];
 			//var batch = batches[i] = intermediateResultsChannels[i].Reader.ReadAsync().GetAwaiter().GetResult();
-			var item = batches[i].Items[batches[i].ReaderIndex++];
-			pq.Enqueue(new SimpleMergeItem(item.Text, item.Number, i), new SimpleMergeKey(item.Text, item.Number));
+			var item = batch.Items[batch.ReaderIndex++];
+			pq.Enqueue(new SimpleMergeItem(item, i), new SimpleMergeKey(item));
 		}
 		
 		// run until the queue is empty
 		while (pq.TryDequeue(out var item, out _))
 		{
-			writer.Write(item.Number);
-			writer.Write('.');
-			writer.Write(item.Text);
-			writer.WriteLine();
+			writer.WriteLine(item.Line);
 			
 			_linesWritten++;
 			_bytesWritten = writer.BaseStream.Position;
@@ -277,7 +266,9 @@ public class SortedFilesMergerChanneling
 
 			if (batch.ReaderIndex == batch.Count)
 			{
+				// no more items in batch, return and load next
 				ArrayPool<SimpleMergeItem>.Shared.Return(batch.Items, clearArray: false);
+				
 				// load batch or complete
 				var sw = new SpinWait();
 				while (!intermediateResultsChannels[item.SourceIndex].Reader.TryRead(out batches[item.SourceIndex]))
@@ -299,7 +290,12 @@ public class SortedFilesMergerChanneling
 			batch = batches[item.SourceIndex];
 			
 			var next = batch.Items[batch.ReaderIndex++];
-			pq.Enqueue(new SimpleMergeItem(next.Text, next.Number, item.SourceIndex), new SimpleMergeKey(next.Text, next.Number));
+			pq.Enqueue(new SimpleMergeItem(next, item.SourceIndex), new SimpleMergeKey(next));
+		}
+		
+		foreach (var b in batches)
+		{
+			Debug.Assert(b == null || b.ReaderIndex == b.Count);
 		}
 
 		return _linesWritten;

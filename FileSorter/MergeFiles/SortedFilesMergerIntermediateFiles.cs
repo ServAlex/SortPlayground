@@ -1,19 +1,10 @@
 using System.Diagnostics;
-using System.IO.Compression;
 using System.Text;
-using System.Threading.Channels;
 
 namespace FileGenerator.FileSorter.MergeFiles;
 
 public class SortedFilesMergerIntermediateFiles
 {
-	private static void Parse(string line, out int number, out string text)
-	{
-		var comma = line.IndexOf('.');
-		number = int.Parse(line.AsSpan(0, comma));
-		text = line[(comma + 1)..];
-	}
-
 	public static long MergeSortedFiles(
 		string directoryName,
 		string destinationFileName,
@@ -121,14 +112,14 @@ public class SortedFilesMergerIntermediateFiles
 			if (string.IsNullOrEmpty(line)) 
 				continue;
 			
-			Parse(line, out var num, out var text);
-			pq.Enqueue(new SimpleMergeItem(text, num, i), new SimpleMergeKey(text, num));
+			var newItem = new SimpleMergeItem(line, i);
+			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
 		}
 		
 		// run until the queue is empty
 		while (pq.TryDequeue(out var item, out _))
 		{
-			writer.WriteLine($"{item.Number}.{item.Text}");
+			writer.WriteLine(item.Line);
 
 			var reader = readers[item.SourceIndex];
 			var next = reader.ReadLine();
@@ -136,10 +127,8 @@ public class SortedFilesMergerIntermediateFiles
 			if (string.IsNullOrEmpty(next)) 
 				continue;
 			
-			Parse(next, out var num, out var text);
-			pq.Enqueue(
-				new SimpleMergeItem(text, num, item.SourceIndex),
-				new SimpleMergeKey(text, num));
+			var newItem = new SimpleMergeItem(next, item.SourceIndex);
+			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
 		}
 	}
 }

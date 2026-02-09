@@ -47,18 +47,15 @@ public class SortedFilesMergerSimple
 			var line = readers[i].ReadLine();
 			if (string.IsNullOrEmpty(line)) 
 				continue;
-			
-			Parse(line, out var num, out var text);
-			pq.Enqueue(new SimpleMergeItem(text, num, i), new SimpleMergeKey(text, num));
+
+			var newItem = new SimpleMergeItem(line, i);
+			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
 		}
 		
 		// run until the queue is empty
 		while (pq.TryDequeue(out var item, out _))
 		{
-			writer.Write(item.Number);
-			writer.Write('.');
-			writer.Write(item.Text);
-			writer.WriteLine();
+			writer.WriteLine(item.Line);
 			totalLines++;
 
 			var reader = readers[item.SourceIndex];
@@ -67,20 +64,11 @@ public class SortedFilesMergerSimple
 			if (string.IsNullOrEmpty(next)) 
 				continue;
 			
-			Parse(next, out var num, out var text);
-			pq.Enqueue(
-				new SimpleMergeItem(text, num, item.SourceIndex),
-				new SimpleMergeKey(text, num));
+			var newItem = new SimpleMergeItem(next, item.SourceIndex);
+			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
 		}
 
 		Console.WriteLine($"Total lines written to final file {totalLines}, time: {sw.ElapsedMilliseconds} ms");
 		return writer.BaseStream.Length;
-	}
-
-	private static void Parse(string line, out int number, out string text)
-	{
-		var comma = line.IndexOf('.');
-		number = int.Parse(line.AsSpan(0, comma));
-		text = line[(comma + 1)..];
 	}
 }
