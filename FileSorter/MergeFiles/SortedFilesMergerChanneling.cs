@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
@@ -149,18 +150,22 @@ public class SortedFilesMergerChanneling
 			pq.Enqueue(new SimpleMergeItem(text, num, i), new SimpleMergeKey(text, num));
 		}
 		
-		var batch = new MergeBatch(new SimpleMergeItem[batchSize]);
+		
+		var batch = new MergeBatch(ArrayPool<SimpleMergeItem>.Shared.Rent(batchSize));
+		//var batch = new MergeBatch(new SimpleMergeItem[batchSize]);
 		
 		// run until the queue is empty
 		while (pq.TryDequeue(out var item, out _))
 		{
 			if (batch.Count == batchSize)
 			{
+				var sw = new SpinWait();
 				while (!intermediateResultsChannel.Writer.TryWrite(batch))
 				{
-					Thread.Yield(); // or SpinWait
+					sw.SpinOnce();
 				}
-				batch = new MergeBatch(new SimpleMergeItem[batchSize]);
+				batch = new MergeBatch(ArrayPool<SimpleMergeItem>.Shared.Rent(batchSize));
+				//batch = new MergeBatch(new SimpleMergeItem[batchSize]);
 			}
 			else
 			{
@@ -181,9 +186,10 @@ public class SortedFilesMergerChanneling
 
 		if (batch.Count > 0)
 		{
+			var sw = new SpinWait();
 			while (!intermediateResultsChannel.Writer.TryWrite(batch))
 			{
-				Thread.Yield(); // or SpinWait
+				sw.SpinOnce();
 			}
 		}
 			
@@ -212,6 +218,7 @@ public class SortedFilesMergerChanneling
 		// populate queue
 		for (var i = 0; i < intermediateResultsChannels.Length; i++)
 		{
+			var sw = new SpinWait();
 			while (!intermediateResultsChannels[i].Reader.TryRead(out batches[i]))
 			{
 				if (intermediateResultsChannels[i].Reader.Completion.IsCompleted)
@@ -219,7 +226,7 @@ public class SortedFilesMergerChanneling
 					completed[i] = true;
 					break;
 				}
-				Thread.Yield();
+				sw.SpinOnce();
 			}
 			
 			//var batch = batches[i] = intermediateResultsChannels[i].Reader.ReadAsync().GetAwaiter().GetResult();
@@ -241,7 +248,9 @@ public class SortedFilesMergerChanneling
 
 			if (batch.ReaderIndex == batch.Count)
 			{
+				ArrayPool<SimpleMergeItem>.Shared.Return(batch.Items, clearArray: false);
 				// load batch or complete
+				var sw = new SpinWait();
 				while (!intermediateResultsChannels[item.SourceIndex].Reader.TryRead(out batches[item.SourceIndex]))
 				{
 					if (intermediateResultsChannels[item.SourceIndex].Reader.Completion.IsCompleted)
@@ -249,7 +258,7 @@ public class SortedFilesMergerChanneling
 						completed[item.SourceIndex] = true;
 						break;
 					}
-					Thread.Yield();
+					sw.SpinOnce();
 				}
 				
 				if (completed[item.SourceIndex])
