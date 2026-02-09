@@ -3,15 +3,15 @@ using System.Text;
 
 namespace FileGenerator.FileSorter.MergeFiles;
 
-public class SortedFilesMergerIntermediateFiles
+public class SortedFilesMergerIntermediateFiles: SortedFilesMerger
 {
-	public static long MergeSortedFiles(
+	public override long MergeSortedFiles(
 		string directoryName,
 		string destinationFileName,
 		int readerBufferSize,
 		int writerBufferSize)
 	{
-		var sw = Stopwatch.StartNew();
+		Stopwatch = Stopwatch.StartNew();
 		Console.WriteLine($"Merging to final file {destinationFileName}");
 		
 		var files = new DirectoryInfo(directoryName).GetFiles();
@@ -46,11 +46,16 @@ public class SortedFilesMergerIntermediateFiles
 					)
 				)
 			);
+		
+		var loggerCancellationTokenSource = new CancellationTokenSource();
+		// ReSharper disable once MethodSupportsCancellation
+		Task.Run(() => LogStage(Stopwatch, null, loggerCancellationTokenSource.Token));
 
-		Console.WriteLine($"Intermediate merges time: {sw.ElapsedMilliseconds} ms");
+		var intermediateMergesTime = Stopwatch.ElapsedMilliseconds;
+		// ReSharper disable once MethodSupportsCancellation
 		Task.WaitAll(tasks);
 		
-		MergeFiles(
+		var bytesWritten = MergeFiles(
 			new DirectoryInfo(intermediateDirectoryName).GetFiles(),
 			"",
 			"sorted",
@@ -59,13 +64,16 @@ public class SortedFilesMergerIntermediateFiles
 			1
 		);
 		
-		Console.WriteLine($"Total time: {sw.ElapsedMilliseconds} ms");
+		loggerCancellationTokenSource.Cancel();
+		
+		Console.WriteLine($"Intermediate merges time: {intermediateMergesTime} ms");
+		Console.WriteLine($"Total time: {Stopwatch.ElapsedMilliseconds} ms");
 		//Console.WriteLine($"Total lines written to final file {fileWritingTask.Result}, time: {sw.ElapsedMilliseconds} ms");
 		
-		return 0;
+		return bytesWritten;
 	}
 
-	private static void MergeFiles(
+	private long MergeFiles(
 		FileInfo[] files, 
 		string destinationDirectoryName, 
 		string filePrefix,
@@ -112,6 +120,8 @@ public class SortedFilesMergerIntermediateFiles
 			if (string.IsNullOrEmpty(line)) 
 				continue;
 			
+			BytesRead += line.Length;
+			
 			var newItem = new SimpleMergeItem(line, i);
 			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
 		}
@@ -120,15 +130,21 @@ public class SortedFilesMergerIntermediateFiles
 		while (pq.TryDequeue(out var item, out _))
 		{
 			writer.WriteLine(item.Line);
+			// no interlocking for performance reasons
+			LinesWritten++;
+			BytesWritten += item.Line.Length;
 
 			var reader = readers[item.SourceIndex];
 			var next = reader.ReadLine();
 			
 			if (string.IsNullOrEmpty(next)) 
 				continue;
+			BytesRead += next.Length;
 			
 			var newItem = new SimpleMergeItem(next, item.SourceIndex);
 			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
 		}
+		
+		return writer.BaseStream.Length;
 	}
 }

@@ -2,30 +2,30 @@ namespace FileGenerator.FileSorter.MergeFiles;
 
 internal readonly struct SimpleMergeKey : IComparable<SimpleMergeKey>
 {
-	public readonly string Line;
-	public readonly int TextOffset;
-	public readonly int TextLength;
-	public readonly int Number;
+	private readonly string _line;
+	private readonly int _textOffset;
+	private readonly int _textLength;
+	private readonly int _number;
 
 	public SimpleMergeKey(SimpleMergeItem item)
 	{
-		Line = item.Line;
-		TextOffset = item.TextOffset;
-		TextLength = item.TextLength;
-		Number = item.Number;
+		_line = item.Line;
+		_textOffset = item.TextOffset;
+		_textLength = item.TextLength;
+		_number = item.Number;
 	}
 
 	public int CompareTo(SimpleMergeKey other)
 	{
 		var comparison = string.CompareOrdinal(
-			Line, TextOffset, 
-			other.Line, other.TextOffset, 
-			Math.Min(TextLength, other.TextLength));
+			_line, _textOffset, 
+			other._line, other._textOffset, 
+			Math.Min(_textLength, other._textLength));
 		
 		if (comparison != 0) 
 			return comparison;
 		
-		return Number.CompareTo(other.Number);
+		return _number.CompareTo(other._number);
 
 	}
 }

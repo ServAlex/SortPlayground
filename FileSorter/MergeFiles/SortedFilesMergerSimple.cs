@@ -3,9 +3,9 @@ using System.Text;
 
 namespace FileGenerator.FileSorter.MergeFiles;
 
-public class SortedFilesMergerSimple
+public class SortedFilesMergerSimple: SortedFilesMerger
 {
-	public static long MergeSortedFiles(
+	public override long MergeSortedFiles(
 		string directoryName, 
 		string destinationFileName, 
 		int readerBufferSize,
@@ -21,8 +21,13 @@ public class SortedFilesMergerSimple
 				Access = FileAccess.Write
 			});
 
-		var sw = Stopwatch.StartNew();
+		Stopwatch = Stopwatch.StartNew();
 		Console.WriteLine($"Merging to final file {destinationFileName}");
+		Console.WriteLine();
+		
+		var loggerCancellationTokenSource = new CancellationTokenSource();
+		// ReSharper disable once MethodSupportsCancellation
+		Task.Run(() => LogStage(Stopwatch, null, loggerCancellationTokenSource.Token));
 		
 		var files = new DirectoryInfo(directoryName).GetFiles();
 		
@@ -38,7 +43,6 @@ public class SortedFilesMergerSimple
 					})
 			).ToList();
 		
-		long totalLines = 0;	
 		var pq = new PriorityQueue<SimpleMergeItem, SimpleMergeKey>();
 		
 		// populate queue
@@ -47,6 +51,7 @@ public class SortedFilesMergerSimple
 			var line = readers[i].ReadLine();
 			if (string.IsNullOrEmpty(line)) 
 				continue;
+			BytesRead += line.Length;
 
 			var newItem = new SimpleMergeItem(line, i);
 			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
@@ -56,19 +61,23 @@ public class SortedFilesMergerSimple
 		while (pq.TryDequeue(out var item, out _))
 		{
 			writer.WriteLine(item.Line);
-			totalLines++;
+			LinesWritten++;
+			BytesWritten = writer.BaseStream.Position;
 
 			var reader = readers[item.SourceIndex];
 			var next = reader.ReadLine();
 			
 			if (string.IsNullOrEmpty(next)) 
 				continue;
+			BytesRead += next.Length;
 			
 			var newItem = new SimpleMergeItem(next, item.SourceIndex);
 			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
 		}
+		
+		loggerCancellationTokenSource.Cancel();
 
-		Console.WriteLine($"Total lines written to final file {totalLines}, time: {sw.ElapsedMilliseconds} ms");
+		Console.WriteLine($"Total lines written to final file {LinesWritten}, time: {Stopwatch.ElapsedMilliseconds} ms");
 		return writer.BaseStream.Length;
 	}
 }
