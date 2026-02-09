@@ -52,7 +52,7 @@ public class SortedFilesMergerChanneling
 		}
 		Directory.CreateDirectory(intermediateDirectoryName);
 		
-		var finalMergeTask = Task.Run(() => FinalMerge(intermediateChannels, writerBufferSize));
+		var finalMergeTask = Task.Run(() => FinalMerge(intermediateChannels, destinationFileName, writerBufferSize));
 		var tasks = new List<Task>();
 		tasks.AddRange(
 			Enumerable
@@ -196,12 +196,12 @@ public class SortedFilesMergerChanneling
 		intermediateResultsChannel.Writer.Complete();
 	}
 
-	private long FinalMerge(Channel<MergeBatch>[] intermediateResultsChannels, int writerBufferSize)
+	private long FinalMerge(Channel<MergeBatch>[] intermediateResultsChannels, string fileName, int writerBufferSize)
 	{
 		Console.WriteLine($"Final merge merging {intermediateResultsChannels.Length} sources");
 		
 		using var writer = new StreamWriter(
-			"sorted.txt",
+			fileName,
 			Encoding.UTF8, 
 			new FileStreamOptions
 			{
