@@ -3,63 +3,71 @@ using System.Text;
 
 namespace FileGenerator.FileSorter.MergeFiles;
 
-public class SortedFilesMerger
+public abstract class SortedFilesMerger
 {
-	public static long MergeSortedFiles(
-		string directoryName, 
-		string destinationFileName, 
+	protected long LinesWritten { get; set;}
+	protected long BytesWritten { get; set;}
+	protected long BytesRead { get; set;}
+	protected Stopwatch? Stopwatch { get; set;}
+
+	public abstract long MergeSortedFiles(
+		string directoryName,
+		string destinationFileName,
 		int readerBufferSize,
-		int writerBufferSize)
+		int writerBufferSize);
+
+	protected void LogStage(Stopwatch sw, Func<string>? getCustomLine, CancellationToken cancellationToken)
 	{
-		using var writer = new StreamWriter(
-			destinationFileName,
-			Encoding.UTF8, 
-			new FileStreamOptions
-			{
-				BufferSize = writerBufferSize, 
-				Mode = FileMode.Create, 
-				Access = FileAccess.Write
-			});
-
-		var sw = Stopwatch.StartNew();
-		Console.WriteLine($"Merging to final file {destinationFileName}");
+		Thread.Sleep(1000);
+		var lastBytesWritten = 0L;
+		var lastBytesRead = 0L;
+		var lastUpdateTime = sw.ElapsedMilliseconds;
 		
-		var files = new DirectoryInfo(directoryName).GetFiles();
-		var readers = files.Select(f =>
-			new SortedFileReader(
-				new StreamReader(
-					//Path.Combine(directoryName, f.Name),
-					f.FullName,
-					Encoding.UTF8,
-					true,
-					new FileStreamOptions
-					{
-						BufferSize = readerBufferSize,
-						Options = FileOptions.SequentialScan
-					})
-			)
-		).ToList();
+		const int lines = 5;
+		var startLine = Console.CursorTop;
+		for (var i = 0; i < lines; i++)
+			Console.WriteLine();
 		
-		var pq = new PriorityQueue<SortedFileReader, PriorityQueueKey>();
-		foreach (var reader in readers)
+		while (!cancellationToken.IsCancellationRequested)
 		{
-			pq.Enqueue(reader, new PriorityQueueKey(reader));
-		}
-		
-		long totalLines = 0;
-
-		//while (readers.Any(r => !r.EndOfFile))
-		while (pq.TryDequeue(out var reader, out var priorityKey))
-		{
-			writer.WriteLine(reader.LineString);
-			totalLines++;
-			if (reader.ReadLine())
+			// move cursor, cross-platform way
+			Console.Write($"\e[{lines}A");
+			
+			var sb = new StringBuilder();
+			if (getCustomLine is not null)
 			{
-				pq.Enqueue(reader, priorityKey);
+				sb.Append(getCustomLine());
+				StringBuilderWriteAndReset(sb);
 			}
+			
+			sb.Append($"   Written:    {BytesWritten/1024/1024:N0} MB");
+			StringBuilderWriteAndReset(sb);
+			
+			sb.Append($"   R/W speed: {(double)(BytesRead-lastBytesRead)/(sw.ElapsedMilliseconds - lastUpdateTime)*1000/1024/1024,5:N1} MB/s");
+			sb.Append($" /{(double)(BytesWritten-lastBytesWritten)/(sw.ElapsedMilliseconds - lastUpdateTime)*1000/1024/1024,5:N1} MB/s");
+			lastUpdateTime = sw.ElapsedMilliseconds;
+			lastBytesWritten = BytesWritten;
+			lastBytesRead = BytesRead;
+			StringBuilderWriteAndReset(sb);
+			
+			sb.Append($"   Avg R/W:   {(double)BytesRead/sw.ElapsedMilliseconds*1000/1024/1024,5:N1} MB/s");
+			sb.Append($" /{(double)BytesWritten/sw.ElapsedMilliseconds*1000/1024/1024,5:N1} MB/s");
+			StringBuilderWriteAndReset(sb);
+			
+			sb.Append($"   Time:       {(double)sw.ElapsedMilliseconds/1000:F1} ms");
+			StringBuilderWriteAndReset(sb);
+			
+			Console.SetCursorPosition(0, startLine);
+			Thread.Sleep(200);
 		}
-
-		Console.WriteLine($"Total lines written to final file {totalLines}, time: {sw.ElapsedMilliseconds} ms");
-		return writer.BaseStream.Length;
+		Console.WriteLine();
+	}
+	
+	private static void StringBuilderWriteAndReset(StringBuilder sb)
+	{
+		Console.WriteLine(sb);
+		sb.Clear();
+		// clear line, cross-platform way
+		sb.Append("\e[2K");
 	}
 }

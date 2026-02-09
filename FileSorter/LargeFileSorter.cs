@@ -65,7 +65,7 @@ public class LargeFileSorter
 	public async Task SortFile(string fileName = "test.txt")
 	{
 		var sw = Stopwatch.StartNew();
-		
+	/*	
 		if (Directory.Exists("Chunks"))
 		{
 			Directory.Delete("Chunks", true);
@@ -102,11 +102,18 @@ public class LargeFileSorter
 		await Task.WhenAll(tasks);
 		
 		Log($"Split to sorted files in: {sw.ElapsedMilliseconds} ms");
+	*/	
 		
-		var outputFileSize = SortedFilesMerger.MergeSortedFiles("Chunks", "sorted.txt", 8 * _bufferSize, 8 * _bufferSize);
+		//var outputFileSize = SortedFilesMerger.MergeSortedFiles("Chunks", "sorted.txt", 512 * 1024, 512 * 1024);
+		//var outputFileSize = SortedFilesMerger.MergeSortedFiles_Threaded("Chunks", "sorted.txt", 4 * 1024 * 1024, 4 * 1024 * 1024);
+		//var outputFileSizeSimple = new SortedFilesMergerSimple().MergeSortedFiles("Chunks", "sorted_simple.txt", 512 * 1024, 512 * 1024);
+		//var outputFileSize2Stage = new SortedFilesMergerIntermediateFiles().MergeSortedFiles("Chunks", "sorted_2stage.txt", 40 * 1024 * 1024, 40 * 1024 * 1024);
+		var outputFileSizeChanneling = new SortedFilesMergerChanneling().MergeSortedFiles("Chunks", "sorted_channelling.txt", 1 * 1024 * 1024, 1 * 1024 * 1024);
 		
 		Console.WriteLine($"Input file size: {_inputFileSize} B");
-		Console.WriteLine($"Output file size: {outputFileSize} B");
+		//Console.WriteLine($"Output file size simple: {outputFileSizeSimple} B");
+		//Console.WriteLine($"Output file size 2 stage: {outputFileSize2Stage} B");
+		Console.WriteLine($"Output file size channeling: {outputFileSizeChanneling} B");
 	}
 
 	private async Task ReadInputFileAsync(string fileName, Channel<CharChunk> sortChannel)
