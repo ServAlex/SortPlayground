@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.IO.Compression;
 using System.Text;
 using System.Threading.Channels;
 
@@ -7,6 +6,8 @@ namespace FileGenerator.FileSorter.MergeFiles;
 
 public class SortedFilesMergerChanneling
 {
+	private long _linesWritten;
+	private long _bytesWritten;
 	private static void Parse(string line, out int number, out string text)
 	{
 		var comma = line.IndexOf('.');
@@ -14,7 +15,7 @@ public class SortedFilesMergerChanneling
 		text = line[(comma + 1)..];
 	}
 
-	public static long MergeSortedFiles(
+	public long MergeSortedFiles(
 		string directoryName,
 		string destinationFileName,
 		int readerBufferSize,
@@ -31,8 +32,8 @@ public class SortedFilesMergerChanneling
 				(int)Math.Floor(Math.Sqrt(chunksCount)), 
 				availableThreads - 1);
 		var filesPerThread = (int)Math.Ceiling((float)chunksCount / intermediateMergeThreads);
-		var intermediateChannelCapacity = 100;
-		var batchSize = 100000;
+		var intermediateChannelCapacity = 10;
+		var batchSize = 1000000;
 		
 		var intermediateChannels = Enumerable
 			.Range(0, intermediateMergeThreads)
@@ -51,7 +52,6 @@ public class SortedFilesMergerChanneling
 		Directory.CreateDirectory(intermediateDirectoryName);
 		
 		var finalMergeTask = Task.Run(() => FinalMerge(intermediateChannels, writerBufferSize));
-		
 		var tasks = new List<Task>();
 		tasks.AddRange(
 			Enumerable
@@ -68,12 +68,45 @@ public class SortedFilesMergerChanneling
 				)
 			);
 		tasks.Add(finalMergeTask);
+		
+		var cancellationTokenSource = new CancellationTokenSource();
+		Task.Run(() => LogStage(intermediateChannels, intermediateChannelCapacity, sw, cancellationTokenSource.Token));
 
+		// ReSharper disable once MethodSupportsCancellation
 		Task.WaitAll(tasks);
+		cancellationTokenSource.Cancel();
 		
 		Console.WriteLine($"Total lines written to final file {finalMergeTask.Result}, time: {sw.ElapsedMilliseconds} ms");
 		
-		return 0;
+		return finalMergeTask.Result;
+	}
+
+	private void LogStage(Channel<MergeBatch>[] intermediateResultsChannels, int capacity, Stopwatch sw, CancellationToken cancellationToken)
+	{
+		Thread.Sleep(1000);
+		var lastBytesWritten = 0L;
+		var lastUpdateTime = sw.ElapsedMilliseconds;
+		var capacityPadding = capacity.ToString().Length+1;
+		while (!cancellationToken.IsCancellationRequested)
+		{
+			var sb = new StringBuilder("\rQueues state:");
+			foreach (var intermediateResultsChannel in intermediateResultsChannels)
+			{
+				sb.Append($"{intermediateResultsChannel.Reader.Count}".PadLeft(capacityPadding)).Append($"/{capacity}");
+			}
+			
+			sb.Append($"   Lines written: {_linesWritten:N0}");
+			sb.Append($"   MB written: {_bytesWritten/1024/1024:N0}");
+			sb.Append($"   Write speed: {(double)(_bytesWritten-lastBytesWritten)/(sw.ElapsedMilliseconds - lastUpdateTime)*1000/1024/1024,5:N1} MB/s");
+			lastUpdateTime = sw.ElapsedMilliseconds;
+			lastBytesWritten = _bytesWritten;
+			sb.Append($"   Avg speed: {(double)_bytesWritten/sw.ElapsedMilliseconds*1000/1024/1024,5:N1} MB/s");
+			sb.Append($"   Time: {(double)sw.ElapsedMilliseconds/1000:F1} ms");
+			
+			Console.Write(sb.ToString().PadRight(Console.WindowWidth - 1));
+			Thread.Sleep(200);
+		}
+		Console.WriteLine();
 	}
 
 	private static void MergeFiles(
@@ -157,7 +190,7 @@ public class SortedFilesMergerChanneling
 		intermediateResultsChannel.Writer.Complete();
 	}
 
-	private static long FinalMerge(Channel<MergeBatch>[] intermediateResultsChannels, int writerBufferSize)
+	private long FinalMerge(Channel<MergeBatch>[] intermediateResultsChannels, int writerBufferSize)
 	{
 		Console.WriteLine($"Final merge merging {intermediateResultsChannels.Length} sources");
 		
@@ -168,11 +201,11 @@ public class SortedFilesMergerChanneling
 			{
 				BufferSize = writerBufferSize, 
 				Mode = FileMode.Create, 
-				Access = FileAccess.Write
+				Access = FileAccess.Write,
+				PreallocationSize = 20L * 1024 * 1024 * 1024
 			});	
 		
 		var pq = new PriorityQueue<SimpleMergeItem, SimpleMergeKey>();
-		long totalLines = 0;
 		var batches = new MergeBatch[intermediateResultsChannels.Length];
 		var completed = new bool[intermediateResultsChannels.Length];
 		
@@ -194,11 +227,16 @@ public class SortedFilesMergerChanneling
 			pq.Enqueue(new SimpleMergeItem(item.Text, item.Number, i), new SimpleMergeKey(item.Text, item.Number));
 		}
 		
+		var lineEndLength = Environment.NewLine.Length;
+		
 		// run until the queue is empty
 		while (pq.TryDequeue(out var item, out _))
 		{
-			totalLines++;
-			writer.WriteLine($"{item.Number}.{item.Text}");
+			var line = $"{item.Number}.{item.Text}";
+			writer.WriteLine(line);
+			_linesWritten++;
+			_bytesWritten +=line.Length + lineEndLength;
+			
 			var batch = batches[item.SourceIndex];
 
 			if (batch.ReaderIndex == batch.Count)
@@ -226,6 +264,6 @@ public class SortedFilesMergerChanneling
 			pq.Enqueue(new SimpleMergeItem(next.Text, next.Number, item.SourceIndex), new SimpleMergeKey(next.Text, next.Number));
 		}
 
-		return totalLines;
+		return _linesWritten;
 	}
 }
