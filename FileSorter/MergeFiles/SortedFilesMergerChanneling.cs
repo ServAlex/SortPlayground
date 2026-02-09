@@ -66,6 +66,7 @@ public class SortedFilesMergerChanneling
 		tasks.Add(finalMergeTask);
 		
 		var cancellationTokenSource = new CancellationTokenSource();
+		// ReSharper disable once MethodSupportsCancellation
 		Task.Run(() => LogStage(intermediateChannels, intermediateChannelCapacity, sw, cancellationTokenSource.Token));
 
 		// ReSharper disable once MethodSupportsCancellation
@@ -99,7 +100,6 @@ public class SortedFilesMergerChanneling
 			}
 			Console.Write($"\x1b[{lines}A");
 			StringBuilderWriteAndReset(sb);
-			//sb.Append($"   Lines written: {_linesWritten:N0}");
 			sb.Append($"   Written:    {_bytesWritten/1024/1024:N0} MB");
 			StringBuilderWriteAndReset(sb);
 			sb.Append($"   R/W speed: {(double)(_bytesRead-lastBytesRead)/(sw.ElapsedMilliseconds - lastUpdateTime)*1000/1024/1024,5:N1} MB/s");
@@ -115,7 +115,6 @@ public class SortedFilesMergerChanneling
 			StringBuilderWriteAndReset(sb);
 			
 			Console.SetCursorPosition(0, startLine);
-			//Console.Write(sb.ToString().PadRight(Console.WindowWidth - 1));
 			Thread.Sleep(200);
 		}
 		Console.WriteLine();
@@ -170,9 +169,7 @@ public class SortedFilesMergerChanneling
 			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
 		}
 		
-		
 		var batch = new MergeBatch(ArrayPool<SimpleMergeItem>.Shared.Rent(batchSize));
-		//var batch = new MergeBatch(new SimpleMergeItem[batchSize]);
 		
 		// run until the queue is empty
 		while (pq.TryDequeue(out var item, out _))
@@ -185,12 +182,9 @@ public class SortedFilesMergerChanneling
 					sw.SpinOnce();
 				}
 				batch = new MergeBatch(ArrayPool<SimpleMergeItem>.Shared.Rent(batchSize));
-				//batch = new MergeBatch(new SimpleMergeItem[batchSize]);
 			}
-			else
-			{
-				batch.Add(new SimpleMergeItem(item, mergerIndex));
-			}
+			
+			batch.Add(new SimpleMergeItem(item, mergerIndex));
 
 			var reader = readers[item.SourceIndex];
 			var next = reader.ReadLine();
