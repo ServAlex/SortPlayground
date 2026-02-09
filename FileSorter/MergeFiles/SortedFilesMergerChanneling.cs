@@ -234,15 +234,16 @@ public class SortedFilesMergerChanneling
 			pq.Enqueue(new SimpleMergeItem(item.Text, item.Number, i), new SimpleMergeKey(item.Text, item.Number));
 		}
 		
-		var lineEndLength = Environment.NewLine.Length;
-		
 		// run until the queue is empty
 		while (pq.TryDequeue(out var item, out _))
 		{
-			var line = $"{item.Number}.{item.Text}";
-			writer.WriteLine(line);
+			writer.Write(item.Number);
+			writer.Write('.');
+			writer.Write(item.Text);
+			writer.WriteLine();
+			
 			_linesWritten++;
-			_bytesWritten +=line.Length + lineEndLength;
+			_bytesWritten = writer.BaseStream.Position;
 			
 			var batch = batches[item.SourceIndex];
 
