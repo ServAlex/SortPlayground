@@ -66,6 +66,7 @@ public class LargeFileSorter
 	{
 		var sw = Stopwatch.StartNew();
 		
+		/*
 		if (Directory.Exists("Chunks"))
 		{
 			Directory.Delete("Chunks", true);
@@ -102,8 +103,13 @@ public class LargeFileSorter
 		await Task.WhenAll(tasks);
 		
 		Log($"Split to sorted files in: {sw.ElapsedMilliseconds} ms");
+		*/
 		
-		var outputFileSize = SortedFilesMerger.MergeSortedFiles("Chunks", "sorted.txt", 8 * _bufferSize, 8 * _bufferSize);
+		//var outputFileSize = SortedFilesMerger.MergeSortedFiles("Chunks", "sorted.txt", 512 * 1024, 512 * 1024);
+		//var outputFileSize = SortedFilesMerger.MergeSortedFiles_Simple("Chunks", "sorted.txt", 512 * 1024, 512 * 1024);
+		//var outputFileSize = SortedFilesMerger.MergeSortedFiles_Threaded("Chunks", "sorted.txt", 4 * 1024 * 1024, 4 * 1024 * 1024);
+		//var outputFileSize = SortedFilesMergerIntermediateFiles.MergeSortedFiles("Chunks", "sorted.txt", 40 * 1024 * 1024, 40 * 1024 * 1024);
+		var outputFileSize = SortedFilesMergerChanneling.MergeSortedFiles("Chunks", "sorted.txt", 4 * 1024 * 1024, 4 * 1024 * 1024);
 		
 		Console.WriteLine($"Input file size: {_inputFileSize} B");
 		Console.WriteLine($"Output file size: {outputFileSize} B");
