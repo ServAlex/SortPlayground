@@ -1,7 +1,5 @@
 using System.Diagnostics;
-using System.IO.Compression;
 using System.Text;
-using System.Threading.Channels;
 
 namespace FileGenerator.FileSorter.MergeFiles;
 
@@ -57,7 +55,10 @@ public class SortedFilesMergerSimple
 		// run until the queue is empty
 		while (pq.TryDequeue(out var item, out _))
 		{
-			writer.WriteLine($"{item.Number}.{item.Text}");
+			writer.Write(item.Number);
+			writer.Write('.');
+			writer.Write(item.Text);
+			writer.WriteLine();
 			totalLines++;
 
 			var reader = readers[item.SourceIndex];
