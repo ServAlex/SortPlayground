@@ -18,7 +18,7 @@ public abstract class SortedFilesMerger
 
 	protected void LogStage(Stopwatch sw, Func<string>? getCustomLine, CancellationToken cancellationToken)
 	{
-		Thread.Sleep(1000);
+		Thread.Sleep(1500);
 		var lastBytesWritten = 0L;
 		var lastBytesRead = 0L;
 		var lastUpdateTime = sw.ElapsedMilliseconds;
