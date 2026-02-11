@@ -1,0 +1,109 @@
+using System.Diagnostics;
+using System.Text;
+
+namespace FileGenerator.FileSorter;
+
+public class FileProgressLogger
+{
+	public long LinesWritten { get; set;}
+	public long BytesWritten { get; set;}
+	public long BytesRead { get; set;}
+	public Stopwatch? Stopwatch { get; set;}
+	public DateTime StartTime { get; set;}
+	public int MemoryBudgetMb { get; set; }
+	public bool IsCountersSynchronized { get; set; }
+	
+	private StringBuilder _sb = new();
+	private int _extraLines = 0;
+
+	public void LogStage(DateTime startTime, Func<string>? getCustomLine, CancellationToken cancellationToken)
+	{
+		Thread.Sleep(1500);
+		var lastBytesWritten = 0L;
+		var lastBytesRead = 0L;
+		var lastUpdateTime = DateTime.Now;
+		StartTime = startTime;
+		
+		Console.WriteLine();
+
+		var linesLogged = 0;
+		while (!cancellationToken.IsCancellationRequested)
+		{
+			// move cursor, cross-platform way
+			Console.Write($"\e[{linesLogged}A");
+			linesLogged = 0;
+			if (_sb.Length > 0)
+			{
+				Console.Write(_sb);
+				_extraLines = 0;
+				_sb.Clear();
+			}
+
+			var sb = new StringBuilder();
+			sb.Append("\e[2K");
+			StringBuilderWriteAndReset(sb, ref linesLogged);
+			
+			if (getCustomLine is not null)
+			{
+				sb.Append(getCustomLine());
+				StringBuilderWriteAndReset(sb, ref linesLogged);
+			}
+
+			sb.Append($"   Written:    {BytesWritten/1024/1024:N0} MB");
+			StringBuilderWriteAndReset(sb, ref linesLogged);
+
+			var newTime = DateTime.Now;
+			sb.Append($"   R/W speed: {(BytesRead-lastBytesRead)/(newTime - lastUpdateTime).TotalSeconds/1024/1024,5:N1} MB/s");
+			sb.Append($" / {(BytesWritten-lastBytesWritten)/(newTime - lastUpdateTime).TotalSeconds*1000/1024/1024,5:N1} MB/s");
+			lastUpdateTime = newTime;
+			lastBytesWritten = BytesWritten;
+			lastBytesRead = BytesRead;
+			StringBuilderWriteAndReset(sb, ref linesLogged);
+
+			var secondsPassed = (newTime - StartTime).TotalSeconds;
+			sb.Append($"   Avg R/W:   {BytesRead/secondsPassed/1024/1024,5:N1} MB/s");
+			sb.Append($" / {BytesWritten/secondsPassed/1024/1024,5:N1} MB/s");
+			StringBuilderWriteAndReset(sb, ref linesLogged);
+
+			sb.Append($"   Time:      {secondsPassed:F1} ms");
+			StringBuilderWriteAndReset(sb, ref linesLogged);
+
+			var usedMemoryGb = (double)GC.GetTotalMemory(true) / 1024 / 1024 / 1024;
+			sb.Append($"   Ram budget:{usedMemoryGb:F1}/{(double)MemoryBudgetMb / 1024:F1} GB");
+			StringBuilderWriteAndReset(sb, ref linesLogged);
+
+			//Console.SetCursorPosition(0, startLine);
+			Thread.Sleep(200);
+		}
+		Console.WriteLine();
+	}
+
+	public void LogSingleMessage(string message)
+	{
+		_sb.AppendLine(message);
+		_extraLines++;
+	}
+
+	public FileProgressLogger Reset()
+	{
+		StartTime = DateTime.Now;
+		_sb.Clear();
+		return this;
+	}
+	
+	private static void StringBuilderWriteAndReset(StringBuilder sb, ref int lines)
+	{
+		Console.WriteLine(sb);
+		sb.Clear();
+		// clear line, cross-platform way
+		sb.Append("\e[2K");
+		// todo: actually count lines in sb
+		lines++;
+	}
+
+	public void LogCompletion()
+	{
+		var synchronizedNote = IsCountersSynchronized ? "" : ", MAY BE OFF due to unsynchronized counter increments";
+		Console.WriteLine($"Written total: {LinesWritten} lines, {BytesWritten} bytes, time: {(DateTime.Now - StartTime).TotalMilliseconds} ms{synchronizedNote}");
+	}
+}

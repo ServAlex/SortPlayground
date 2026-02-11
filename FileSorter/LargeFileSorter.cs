@@ -27,9 +27,12 @@ public class LargeFileSorter
 	private readonly Channel<(SortedChunk, SortedChunk?)> _mergeToFileChannel;
 
 	private long _inputFileSize;
+
+	private readonly FileProgressLogger logger;
 	
-	public LargeFileSorter(LargeFileSorterOptions options)
+	public LargeFileSorter(LargeFileSorterOptions options, FileProgressLogger logger)
 	{
+		this.logger = logger;
 		_bufferSize = options.BufferSizeMb * 1024 * 1024;
 		_sortWorkerCount = options.SortWorkerCount;
 		_mergeWorkerCount = options.MergeWorkerCount;
@@ -65,7 +68,7 @@ public class LargeFileSorter
 	public async Task SortFile(string fileName = "test.txt")
 	{
 		var sw = Stopwatch.StartNew();
-	/*	
+		
 		if (Directory.Exists("Chunks"))
 		{
 			Directory.Delete("Chunks", true);
@@ -98,17 +101,21 @@ public class LargeFileSorter
 			// merge to file worker
 			Task.Run(async () => await MergeToFileAsync(_mergeToFileChannel, "Chunks"))
 		};
+		
+		var loggerCancellationTokenSource = new CancellationTokenSource();
+		Task.Run(() => logger.LogStage(DateTime.Now, null, loggerCancellationTokenSource.Token));
 
 		await Task.WhenAll(tasks);
 		
-		Log($"Split to sorted files in: {sw.ElapsedMilliseconds} ms");
-	*/	
+		await loggerCancellationTokenSource.CancelAsync();
 		
+//#		Log($"Split to sorted files in: {sw.ElapsedMilliseconds} ms");
+
 		//var outputFileSize = SortedFilesMerger.MergeSortedFiles("Chunks", "sorted.txt", 512 * 1024, 512 * 1024);
 		//var outputFileSize = SortedFilesMerger.MergeSortedFiles_Threaded("Chunks", "sorted.txt", 4 * 1024 * 1024, 4 * 1024 * 1024);
 		//var outputFileSizeSimple = new SortedFilesMergerSimple().MergeSortedFiles("Chunks", "sorted_simple.txt", 512 * 1024, 512 * 1024);
 		//var outputFileSize2Stage = new SortedFilesMergerIntermediateFiles().MergeSortedFiles("Chunks", "sorted_2stage.txt", 40 * 1024 * 1024, 40 * 1024 * 1024);
-		var outputFileSizeChanneling = new SortedFilesMergerChanneling().MergeSortedFiles("Chunks", "sorted_channelling.txt", 1 * 1024 * 1024, 1 * 1024 * 1024);
+		var outputFileSizeChanneling = new SortedFilesMergerChanneling(logger.Reset()).MergeSortedFiles("Chunks", "sorted_channelling.txt", 1 * 1024 * 1024, 1 * 1024 * 1024);
 		
 		Console.WriteLine($"Input file size: {_inputFileSize} B");
 		//Console.WriteLine($"Output file size simple: {outputFileSizeSimple} B");
@@ -118,7 +125,8 @@ public class LargeFileSorter
 
 	private async Task ReadInputFileAsync(string fileName, Channel<CharChunk> sortChannel)
 	{
-		Log("Started reading");
+//#		Log("Started reading");
+		logger.LogSingleMessage($"Started reading {fileName}");
 
 		using var reader = new StreamReader(
 			fileName,
@@ -166,7 +174,8 @@ public class LargeFileSorter
 			var usedMemoryKb = GC.GetTotalMemory(true) / 1024;
 			while ((float)usedMemoryKb/1024 > _memoryBudgetMb*0.85)
 			{
-				Log($"--------------------- used memory: {(float)usedMemoryKb / 1024 / 1024:F1} GB");
+				logger.LogSingleMessage($"approaching memory budget, holding new chunk for 1 sec");
+//#				Log($"--------------------- used memory: {(float)usedMemoryKb / 1024 / 1024:F1} GB");
 				await Task.Delay(1000);
 				usedMemoryKb = GC.GetTotalMemory(true) / 1024;
 			}
@@ -174,7 +183,7 @@ public class LargeFileSorter
 		} while (!isReadToEnd);
 
 		sortChannel.Writer.Complete();
-		Console.WriteLine("Channel completed writing");
+//#		Console.WriteLine("Channel completed writing");
 	}
 
 	private async Task SortChunkAsync(Channel<CharChunk> sortChannel, Channel<SortedChunk> mergeInMemoryChannel)
@@ -192,7 +201,8 @@ public class LargeFileSorter
 			var comparer = new LineComparer(chunk.Buffer);
 			Array.Sort(records, 0, count, comparer);
 			
-			Log($"sorted chunk with {count} lines {chunk.FilledLength} chars in {sw.ElapsedMilliseconds} ms");
+//			logger.LogSingleMessage($"sorted chunk with {count} lines {chunk.FilledLength} chars in {sw.ElapsedMilliseconds} ms");
+//#			Log($"sorted chunk with {count} lines {chunk.FilledLength} chars in {sw.ElapsedMilliseconds} ms");
 			
 			SortedChunk sortedChunk = new SortedChunk(records, chunk, _maxRank, count);
 			await mergeInMemoryChannel.Writer.WriteAsync(sortedChunk);
@@ -233,14 +243,14 @@ public class LargeFileSorter
 					if (second is null)
 					{
 						_sortedChunks[chunk.ChunkRank] = chunk;
-						Log($"stored chunk of rank {chunk.ChunkRank}      {string.Join(", ", _sortedChunks.Select(c => c is null ? "0" : "1"))}");
+//#						Log($"stored chunk of rank {chunk.ChunkRank}      {string.Join(", ", _sortedChunks.Select(c => c is null ? "0" : "1"))}");
 						break;
 					}
 
 					_sortedChunks[chunk.ChunkRank] = null;
 				}
 
-				Log($"merging chunks of rank {chunk.ChunkRank}");
+//#				Log($"merging chunks of rank {chunk.ChunkRank}");
 				if (chunk.ChunkRank == 0)
 				{
 					// can't merge this to memory, merge directly to file
@@ -291,7 +301,6 @@ public class LargeFileSorter
 	{
 		await foreach (var (chunkA, chunkB) in mergeToFileChannel.Reader.ReadAllAsync())
 		{
-			var sw = Stopwatch.StartNew();
 			string filename;
 			lock (_fileCounterLock)
 			{
@@ -299,8 +308,9 @@ public class LargeFileSorter
 				_fileChunkCounter++;
 			}
 
+			var path = Path.Combine(directoryName, filename);
 			await using var writer = new StreamWriter(
-				Path.Combine(directoryName, filename),
+				path,
 				Encoding.UTF8, 
 				new FileStreamOptions
 				{
@@ -313,13 +323,15 @@ public class LargeFileSorter
 			{
 				// merge 2 chunks directly to the file
 				chunkA.MergeToStream(chunkB, writer, 1024 * 1024);
+				logger.LogSingleMessage($"written merged chunk to file {path}");
 			}
 			else
 			{
 				chunkA.WriteChunk(writer);
+				logger.LogSingleMessage($"written part chunk to file {path}");
 			}
 		
-			Log($"Chunk written to file {filename} in {sw.ElapsedMilliseconds} ms");
+//#			Log($"Chunk written to file {filename} in {sw.ElapsedMilliseconds} ms");
 		}
 	}
 

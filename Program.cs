@@ -32,7 +32,7 @@ else
 	Console.WriteLine("using old file");
 }
 
-var sorter = new LargeFileSorter(options); 
+var sorter = new LargeFileSorter(options, new FileProgressLogger()); 
 
 sw.Restart();
 await sorter.SortFile("test.txt");
