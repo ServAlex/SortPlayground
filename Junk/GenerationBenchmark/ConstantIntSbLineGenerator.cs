@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace FileGenerator.Generators;
+namespace FileGenerator.GenerationBenchmark;
 
 public class ConstantIntSbLineGenerator: ILineGenerator
 {

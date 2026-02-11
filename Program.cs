@@ -1,13 +1,6 @@
 ﻿using System.Diagnostics;
 using FileGenerator.FileSorter;
-using FileGenerator.FullGeneratorBenchmark;
 using Microsoft.Extensions.Configuration;
-
-//var summary = BenchmarkRunner.Run<GenerationBenchmark>();
-//var summary = BenchmarkRunner.Run<GivenLengthLineGeneratorBenchmark>();
-//var summary = BenchmarkRunner.Run<ChunkFileWriterBenchmark>();
-//var summary = BenchmarkRunner.Run<MultiGbFileWriterBenchmark>();
-//var summary = BenchmarkRunner.Run<FullGeneratorBenchmark>();
 
 var config = new ConfigurationBuilder()
 	.AddJsonFile("appsettings.json")
@@ -23,7 +16,7 @@ var sw = Stopwatch.StartNew();
 
 if (generateNewFile)
 {
-	var generator = new FullGeneratorBenchmark();
+	var generator = new FileGenerator.FileGeneration.FileGenerator();
 	generator.GenerateFileSingleThreadedBatched(fileSizeMb);
 	Console.WriteLine($"file generated in {sw.ElapsedMilliseconds} ms");
 }
@@ -38,5 +31,3 @@ sw.Restart();
 await sorter.SortFile("test.txt");
 Console.WriteLine($"direct sync read to channel in {sw.ElapsedMilliseconds} ms");
 
-
-//Console.WriteLine($"max rank {sorter.MaxRank((1 << 30) - 1 + (1 << 30), 63 * (1 << 20))}");

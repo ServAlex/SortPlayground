@@ -1,6 +1,4 @@
-using System.Text;
-
-namespace FileGenerator.Generators;
+namespace FileGenerator.GenerationBenchmark;
 
 public class ConstantWordLineGenerator: ILineGenerator
 {
