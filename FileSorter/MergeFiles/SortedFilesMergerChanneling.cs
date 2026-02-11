@@ -71,7 +71,7 @@ public class SortedFilesMergerChanneling
 		
 		var loggerCancellationTokenSource = new CancellationTokenSource();
 		// ReSharper disable once MethodSupportsCancellation
-		Task.Run(() => _logger.LogStage(startTime, () =>
+		Task.Run(() => _logger.LogState(startTime, () =>
 		{
 			var stringBuilder = new StringBuilder("   Queues states:");
 			intermediateChannels

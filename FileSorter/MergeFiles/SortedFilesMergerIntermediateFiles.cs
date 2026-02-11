@@ -56,7 +56,7 @@ public class SortedFilesMergerIntermediateFiles
 		
 		var loggerCancellationTokenSource = new CancellationTokenSource();
 		// ReSharper disable once MethodSupportsCancellation
-		Task.Run(() => _logger.LogStage(startTime, null, loggerCancellationTokenSource.Token));
+		Task.Run(() => _logger.LogState(startTime, null, loggerCancellationTokenSource.Token));
 
 		var intermediateMergesTime = DateTime.Now.Subtract(startTime).TotalMilliseconds;
 		// ReSharper disable once MethodSupportsCancellation

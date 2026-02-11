@@ -34,7 +34,7 @@ public class SortedFilesMergerSimple
 		
 		var loggerCancellationTokenSource = new CancellationTokenSource();
 		// ReSharper disable once MethodSupportsCancellation
-		Task.Run(() => _logger.LogStage(startTime, null, loggerCancellationTokenSource.Token));
+		Task.Run(() => _logger.LogState(startTime, null, loggerCancellationTokenSource.Token));
 		
 		var files = new DirectoryInfo(directoryName).GetFiles();
 		

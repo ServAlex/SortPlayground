@@ -8,15 +8,14 @@ public class FileProgressLogger
 	public long LinesWritten { get; set;}
 	public long BytesWritten { get; set;}
 	public long BytesRead { get; set;}
-	public Stopwatch? Stopwatch { get; set;}
-	public DateTime StartTime { get; set;}
 	public int MemoryBudgetMb { get; set; }
 	public bool IsCountersSynchronized { get; set; }
 	
+	private DateTime StartTime { get; set;}
+	
 	private StringBuilder _sb = new();
-	private int _extraLines = 0;
 
-	public void LogStage(DateTime startTime, Func<string>? getCustomLine, CancellationToken cancellationToken)
+	public void LogState(DateTime startTime, Func<string>? getCustomLine, CancellationToken cancellationToken)
 	{
 		Thread.Sleep(1500);
 		var lastBytesWritten = 0L;
@@ -35,7 +34,6 @@ public class FileProgressLogger
 			if (_sb.Length > 0)
 			{
 				Console.Write(_sb);
-				_extraLines = 0;
 				_sb.Clear();
 			}
 
@@ -54,7 +52,7 @@ public class FileProgressLogger
 
 			var newTime = DateTime.Now;
 			sb.Append($"   R/W speed: {(BytesRead-lastBytesRead)/(newTime - lastUpdateTime).TotalSeconds/1024/1024,5:N1} MB/s");
-			sb.Append($" / {(BytesWritten-lastBytesWritten)/(newTime - lastUpdateTime).TotalSeconds*1000/1024/1024,5:N1} MB/s");
+			sb.Append($" / {(BytesWritten-lastBytesWritten)/(newTime - lastUpdateTime).TotalSeconds/1024/1024,5:N1} MB/s");
 			lastUpdateTime = newTime;
 			lastBytesWritten = BytesWritten;
 			lastBytesRead = BytesRead;
@@ -81,13 +79,15 @@ public class FileProgressLogger
 	public void LogSingleMessage(string message)
 	{
 		_sb.AppendLine(message);
-		_extraLines++;
 	}
 
 	public FileProgressLogger Reset()
 	{
 		StartTime = DateTime.Now;
 		_sb.Clear();
+		LinesWritten = 0;
+		BytesWritten = 0;
+		BytesRead = 0;
 		return this;
 	}
 	

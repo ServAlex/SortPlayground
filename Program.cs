@@ -25,7 +25,7 @@ else
 	Console.WriteLine("using old file");
 }
 
-var sorter = new LargeFileSorter(options, new FileProgressLogger()); 
+var sorter = new LargeFileSorter(options, new FileProgressLogger{MemoryBudgetMb = options.MemoryBudgetGb*1024}); 
 
 sw.Restart();
 await sorter.SortFile("test.txt");
