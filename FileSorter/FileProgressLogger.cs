@@ -80,6 +80,7 @@ public class FileProgressLogger
 			Thread.Sleep(200);
 		}
 		Console.WriteLine();
+		Console.WriteLine();
 	}
 
 	public void LogSingleMessage(string message)

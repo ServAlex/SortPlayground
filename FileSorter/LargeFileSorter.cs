@@ -105,13 +105,12 @@ public class LargeFileSorter
 		var loggerCancellationTokenSource = new CancellationTokenSource();
 		// ReSharper disable once MethodSupportsCancellation
 		_ = Task.Run(() => _logger.LogState(DateTime.Now, () => 
-			$"SQ:{_sortChannel.Reader.Count}/{_queueLength} MQ:{_mergeInMemoryChannel.Reader.Count}/{1} MFQ:{_mergeToFileChannel.Reader.Count}/{1}", loggerCancellationTokenSource.Token));
+			$"   SQ:{_sortChannel.Reader.Count}/{_queueLength}  MQ:{_mergeInMemoryChannel.Reader.Count}/{1}  MFQ:{_mergeToFileChannel.Reader.Count}/{1}", loggerCancellationTokenSource.Token));
 
 		await Task.WhenAll(tasks);
 		
 		await loggerCancellationTokenSource.CancelAsync();
 		
-		Console.WriteLine();
 		Console.WriteLine($"Split to sorted files in: {sw.ElapsedMilliseconds} ms");
 		Console.WriteLine();
 
@@ -119,8 +118,12 @@ public class LargeFileSorter
 		//var outputFileSize = SortedFilesMerger.MergeSortedFiles_Threaded("Chunks", "sorted.txt", 4 * 1024 * 1024, 4 * 1024 * 1024);
 		//var outputFileSizeSimple = new SortedFilesMergerSimple().MergeSortedFiles("Chunks", "sorted_simple.txt", 512 * 1024, 512 * 1024);
 		//var outputFileSize2Stage = new SortedFilesMergerIntermediateFiles().MergeSortedFiles("Chunks", "sorted_2stage.txt", 40 * 1024 * 1024, 40 * 1024 * 1024);
-		var outputFileSizeChanneling = new SortedFilesMergerChanneling(_logger.Reset()).
-			MergeSortedFiles("Chunks", "sorted_channelling.txt", 1 * 1024 * 1024, 1 * 1024 * 1024);
+		var outputFileSizeChanneling = new SortedFilesMergerChanneling(_logger.Reset()).MergeSortedFiles(
+			"Chunks",
+			"sorted_channelling.txt",
+			1 * 1024 * 1024,
+			1 * 1024 * 1024,
+			_memoryBudgetMb);
 		
 		Console.WriteLine($"Input file size: {_inputFileSize} B");
 		//Console.WriteLine($"Output file size simple: {outputFileSizeSimple} B");
@@ -228,7 +231,7 @@ public class LargeFileSorter
 					if (second is null)
 					{
 						_sortedChunks[chunk.ChunkRank] = chunk;
-						_logger.LogSingleMessage($"stored chunk of rank {chunk.ChunkRank}     {string.Join(", ", _sortedChunks.Select(c => c is null ? "0" : "1"))}");
+						//_logger.LogSingleMessage($"stored chunk of rank {chunk.ChunkRank}     {string.Join(", ", _sortedChunks.Select(c => c is null ? "0" : "1"))}");
 						break;
 					}
 
@@ -255,20 +258,24 @@ public class LargeFileSorter
 	{
 		SortedChunk? last;
 		SortedChunk? accumulator = null;
-		for(var i = _sortedChunks.Length - 1; i > 0; i--)
+
+		lock (_sortedChunksLock)
 		{
-			last = _sortedChunks[i];
+			for (var i = _sortedChunks.Length - 1; i > 0; i--)
+			{
+				last = _sortedChunks[i];
 
-			if (last is null) 
-				continue;
-				
-			_sortedChunks[i] = null;
+				if (last is null)
+					continue;
 
-			accumulator = accumulator is not null ? new SortedChunk(last, accumulator) : last;
+				_sortedChunks[i] = null;
+
+				accumulator = accumulator is not null ? new SortedChunk(last, accumulator) : last;
+			}
+
+			last = _sortedChunks[0];
 		}
 
-		last = _sortedChunks[0];
-		
 		switch (last, accumulator)
 		{
 			case (not null, _):
