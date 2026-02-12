@@ -47,27 +47,33 @@ public class FileProgressLogger
 				StringBuilderWriteAndReset(sb, ref linesLogged);
 			}
 
-			sb.Append($"   Written:    {BytesWritten/1024/1024:N0} MB");
+			sb.Append($"   Written:   {BytesWritten/1024/1024,6:N0} MB");
 			StringBuilderWriteAndReset(sb, ref linesLogged);
 
 			var newTime = DateTime.Now;
-			sb.Append($"   R/W speed: {(BytesRead-lastBytesRead)/(newTime - lastUpdateTime).TotalSeconds/1024/1024,5:N1} MB/s");
-			sb.Append($" / {(BytesWritten-lastBytesWritten)/(newTime - lastUpdateTime).TotalSeconds/1024/1024,5:N1} MB/s");
+			sb.Append($"   R/W speed: {(BytesRead-lastBytesRead)/(newTime - lastUpdateTime).TotalSeconds/1024/1024,6:N1} MB/s");
+			sb.Append($"  / {(BytesWritten-lastBytesWritten)/(newTime - lastUpdateTime).TotalSeconds/1024/1024,6:N1} MB/s");
 			lastUpdateTime = newTime;
 			lastBytesWritten = BytesWritten;
 			lastBytesRead = BytesRead;
 			StringBuilderWriteAndReset(sb, ref linesLogged);
 
 			var secondsPassed = (newTime - StartTime).TotalSeconds;
-			sb.Append($"   Avg R/W:   {BytesRead/secondsPassed/1024/1024,5:N1} MB/s");
-			sb.Append($" / {BytesWritten/secondsPassed/1024/1024,5:N1} MB/s");
+			sb.Append($"   Avg R/W:   {BytesRead/secondsPassed/1024/1024,6:N1} MB/s");
+			sb.Append($"  / {BytesWritten/secondsPassed/1024/1024,6:N1} MB/s");
 			StringBuilderWriteAndReset(sb, ref linesLogged);
 
-			sb.Append($"   Time:      {secondsPassed:F1} ms");
+			sb.Append($"   Time:       {secondsPassed,5:F1} s");
 			StringBuilderWriteAndReset(sb, ref linesLogged);
 
-			var usedMemoryGb = (double)GC.GetTotalMemory(true) / 1024 / 1024 / 1024;
-			sb.Append($"   Ram budget:{usedMemoryGb:F1}/{(double)MemoryBudgetMb / 1024:F1} GB");
+			var workingSetGb = Process.GetCurrentProcess().WorkingSet64 / 1024d / 1024 / 1024;
+			var gcInfo = GC.GetGCMemoryInfo();
+			var memoryLoad = gcInfo.MemoryLoadBytes / 1024d / 1024 / 1024;
+			var totalSystemMemoryGb = gcInfo.TotalAvailableMemoryBytes / 1024d / 1024 / 1024;
+			sb.Append($"   RAM budget:{workingSetGb,5:F1} / {MemoryBudgetMb / 1024d:F1} GB");
+			sb.Append($"  System memory load: {memoryLoad,5:F1} GB");
+			sb.Append($"  Total RAM: {totalSystemMemoryGb,5:F1} GB");
+			sb.Append($"  pause: {gcInfo.PauseTimePercentage,5:F1}%");
 			StringBuilderWriteAndReset(sb, ref linesLogged);
 
 			//Console.SetCursorPosition(0, startLine);
