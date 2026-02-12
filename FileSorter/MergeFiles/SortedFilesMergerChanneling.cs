@@ -5,15 +5,8 @@ using System.Threading.Channels;
 
 namespace FileGenerator.FileSorter.MergeFiles;
 
-public class SortedFilesMergerChanneling
+public class SortedFilesMergerChanneling(FileProgressLogger logger)
 {
-	private FileProgressLogger _logger;
-
-	public SortedFilesMergerChanneling(FileProgressLogger logger)
-	{
-		_logger = logger;
-	}
-
 	public long MergeSortedFiles(
 		string directoryName,
 		string destinationFileName,
@@ -21,6 +14,7 @@ public class SortedFilesMergerChanneling
 		int writerBufferSize)
 	{
 		var startTime = DateTime.Now;
+		Console.WriteLine();
 		Console.WriteLine($"Merging to final file {destinationFileName}");
 		
 		var files = new DirectoryInfo(directoryName).GetFiles();
@@ -71,7 +65,7 @@ public class SortedFilesMergerChanneling
 		
 		var loggerCancellationTokenSource = new CancellationTokenSource();
 		// ReSharper disable once MethodSupportsCancellation
-		Task.Run(() => _logger.LogState(startTime, () =>
+		Task.Run(() => logger.LogState(startTime, () =>
 		{
 			var stringBuilder = new StringBuilder("   Queues states:");
 			intermediateChannels
@@ -85,7 +79,7 @@ public class SortedFilesMergerChanneling
 		Task.WaitAll(tasks);
 		loggerCancellationTokenSource.Cancel();
 
-		_logger.LogCompletion();
+		logger.LogCompletion();
 		
 		return finalMergeTask.Result;
 	}
@@ -126,7 +120,7 @@ public class SortedFilesMergerChanneling
 			var line = readers[i].ReadLine();
 			if (string.IsNullOrEmpty(line)) 
 				continue;
-			_logger.BytesRead += line.Length + lineEndLength;
+			logger.BytesRead += line.Length + lineEndLength;
 			
 			var newItem = new SimpleMergeItem(line, i);
 			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
@@ -155,7 +149,7 @@ public class SortedFilesMergerChanneling
 			if (string.IsNullOrEmpty(next)) 
 				continue;
 			
-			_logger.BytesRead += next.Length + lineEndLength;
+			logger.BytesRead += next.Length + lineEndLength;
 			
 			var newItem = new SimpleMergeItem(next, item.SourceIndex);
 			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
@@ -216,8 +210,8 @@ public class SortedFilesMergerChanneling
 		{
 			writer.WriteLine(item.Line);
 			
-			_logger.LinesWritten++;
-			_logger.BytesWritten = writer.BaseStream.Position;
+			logger.LinesWritten++;
+			logger.BytesWritten = writer.BaseStream.Position;
 			
 			var batch = batches[item.SourceIndex];
 
@@ -255,6 +249,6 @@ public class SortedFilesMergerChanneling
 			Debug.Assert(b == null || b.ReaderIndex == b.Count);
 		}
 
-		return _logger.BytesWritten;
+		return writer.BaseStream.Position;
 	}
 }

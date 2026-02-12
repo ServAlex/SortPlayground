@@ -57,10 +57,8 @@ public class SortedChunk
 		}
 	}
 
-	public void MergeToStream(SortedChunk second, StreamWriter stream, int bufferSize)
+	public long MergeToStream(SortedChunk second, StreamWriter stream, int bufferSize)
 	{
-		var buffer = new char[bufferSize];
-		var bufferSpan = buffer.AsSpan();
 		var chunkA = this;
 		var chunkB = second;
 		
@@ -92,9 +90,11 @@ public class SortedChunk
 
 		chunkA.WriteChunk(stream, i);
 		chunkB.WriteChunk(stream, j);
+		
+		return stream.BaseStream.Position;
 	}
 
-	public void WriteChunk(StreamWriter writer, int startIndex = 0)
+	public long WriteChunk(StreamWriter writer, int startIndex = 0)
 	{
 		for (var i = startIndex; i < _linesCount; i++)
 		{
@@ -102,6 +102,7 @@ public class SortedChunk
 			if(line.LineLength > 0)
 				writer.WriteLine(_subChunks[line.SubChunkIndex].Span.Slice(line.LineOffset, line.LineLength));
 		}
+		return writer.BaseStream.Position;
 	}
 
 	private static int Compare(Line a, Line b, CharChunk[] chunkArrayA, CharChunk[] chunkArrayB)

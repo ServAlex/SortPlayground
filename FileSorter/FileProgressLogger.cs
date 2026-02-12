@@ -71,9 +71,9 @@ public class FileProgressLogger
 			var memoryLoad = gcInfo.MemoryLoadBytes / 1024d / 1024 / 1024;
 			var totalSystemMemoryGb = gcInfo.TotalAvailableMemoryBytes / 1024d / 1024 / 1024;
 			sb.Append($"   RAM budget:{workingSetGb,5:F1} / {MemoryBudgetMb / 1024d:F1} GB");
-			sb.Append($"  System memory load: {memoryLoad,5:F1} GB");
-			sb.Append($"  Total RAM: {totalSystemMemoryGb,5:F1} GB");
-			sb.Append($"  pause: {gcInfo.PauseTimePercentage,5:F1}%");
+			sb.Append($"    System memory load: {memoryLoad,5:F1} GB");
+			sb.Append($"    Total RAM: {totalSystemMemoryGb,5:F1} GB");
+			sb.Append($"    Pause: {gcInfo.PauseTimePercentage,5:F1}%");
 			StringBuilderWriteAndReset(sb, ref linesLogged);
 
 			//Console.SetCursorPosition(0, startLine);
@@ -111,5 +111,6 @@ public class FileProgressLogger
 	{
 		var synchronizedNote = IsCountersSynchronized ? "" : ", MAY BE OFF due to unsynchronized counter increments";
 		Console.WriteLine($"Written total: {LinesWritten} lines, {BytesWritten} bytes, time: {(DateTime.Now - StartTime).TotalMilliseconds} ms{synchronizedNote}");
+		Console.WriteLine();
 	}
 }
