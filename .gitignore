@@ -6,5 +6,7 @@ riderModule.iml
 
 *.user
 
+Chunks/
+
 .idea/
 *.txt

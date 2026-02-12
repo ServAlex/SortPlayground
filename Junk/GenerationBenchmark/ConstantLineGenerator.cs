@@ -1,4 +1,4 @@
-namespace FileGenerator.Generators;
+namespace FileGenerator.GenerationBenchmark;
 
 public class ConstantLineGenerator: ILineGenerator
 {

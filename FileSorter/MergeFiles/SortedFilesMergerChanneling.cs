@@ -5,27 +5,33 @@ using System.Threading.Channels;
 
 namespace FileGenerator.FileSorter.MergeFiles;
 
-public class SortedFilesMergerChanneling: SortedFilesMerger
+public class SortedFilesMergerChanneling(FileProgressLogger logger)
 {
-	public override long MergeSortedFiles(
+	public long MergeSortedFiles(
 		string directoryName,
 		string destinationFileName,
 		int readerBufferSize,
-		int writerBufferSize)
+		int writerBufferSize,
+		int memoryBudgetMb)
 	{
-		Stopwatch = Stopwatch.StartNew();
+		var startTime = DateTime.Now;
+		Console.WriteLine();
 		Console.WriteLine($"Merging to final file {destinationFileName}");
+		Console.WriteLine();
 		
 		var files = new DirectoryInfo(directoryName).GetFiles();
 		var chunksCount = files.Length;
+		//todo: check for no files
 		var availableThreads = Environment.ProcessorCount;
 		var intermediateMergeThreads =
 			Math.Min(
 				(int)Math.Floor(Math.Sqrt(chunksCount)), 
 				availableThreads - 1);
 		var filesPerThread = (int)Math.Ceiling((float)chunksCount / intermediateMergeThreads);
-		var intermediateChannelCapacity = 100;
+		//var intermediateChannelCapacity = 100;
 		var batchSize = 100_000;
+		const int empiricalConstant = 600;
+		var intermediateChannelCapacity = (int)Math.Min(100, (long)memoryBudgetMb*1024*1024/batchSize/intermediateMergeThreads/empiricalConstant);
 		
 		var intermediateChannels = Enumerable
 			.Range(0, intermediateMergeThreads)
@@ -43,7 +49,6 @@ public class SortedFilesMergerChanneling: SortedFilesMerger
 		}
 		Directory.CreateDirectory(intermediateDirectoryName);
 		
-		var finalMergeTask = Task.Run(() => FinalMerge(intermediateChannels, destinationFileName, writerBufferSize));
 		var tasks = new List<Task>();
 		tasks.AddRange(
 			Enumerable
@@ -59,13 +64,15 @@ public class SortedFilesMergerChanneling: SortedFilesMerger
 					)
 				)
 			);
+		
+		var finalMergeTask = Task.Run(() => FinalMerge(intermediateChannels, destinationFileName, writerBufferSize));
 		tasks.Add(finalMergeTask);
 		
 		var loggerCancellationTokenSource = new CancellationTokenSource();
 		// ReSharper disable once MethodSupportsCancellation
-		Task.Run(() => LogStage(Stopwatch, () =>
+		Task.Run(() => logger.LogState(startTime, () =>
 		{
-			var stringBuilder = new StringBuilder("   Queues states:");
+			var stringBuilder = new StringBuilder("   Stage 1 output Qs:");
 			intermediateChannels
 				.Select(c => $"{c.Reader.Count,4:D}/{intermediateChannelCapacity}")
 				.Aggregate(stringBuilder, (sb, str) => sb.Append(' ').Append(str));
@@ -76,8 +83,9 @@ public class SortedFilesMergerChanneling: SortedFilesMerger
 		// ReSharper disable once MethodSupportsCancellation
 		Task.WaitAll(tasks);
 		loggerCancellationTokenSource.Cancel();
-		
-		Console.WriteLine($"Total lines written to final file {LinesWritten}, time: {Stopwatch.ElapsedMilliseconds} ms");
+
+		//logger.LogCompletion();
+		Console.WriteLine();
 		
 		return finalMergeTask.Result;
 	}
@@ -118,7 +126,7 @@ public class SortedFilesMergerChanneling: SortedFilesMerger
 			var line = readers[i].ReadLine();
 			if (string.IsNullOrEmpty(line)) 
 				continue;
-			BytesRead += line.Length + lineEndLength;
+			logger.BytesRead += line.Length + lineEndLength;
 			
 			var newItem = new SimpleMergeItem(line, i);
 			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
@@ -147,7 +155,7 @@ public class SortedFilesMergerChanneling: SortedFilesMerger
 			if (string.IsNullOrEmpty(next)) 
 				continue;
 			
-			BytesRead += next.Length + lineEndLength;
+			logger.BytesRead += next.Length + lineEndLength;
 			
 			var newItem = new SimpleMergeItem(next, item.SourceIndex);
 			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
@@ -167,7 +175,9 @@ public class SortedFilesMergerChanneling: SortedFilesMerger
 
 	private long FinalMerge(Channel<MergeBatch>[] intermediateResultsChannels, string fileName, int writerBufferSize)
 	{
-		Console.WriteLine($"Final merge merging {intermediateResultsChannels.Length} sources");
+		var sb = new StringBuilder($"Stage 2 merges {intermediateResultsChannels.Length} sources");
+		sb.AppendLine();
+		Console.WriteLine(sb);
 		
 		using var writer = new StreamWriter(
 			fileName,
@@ -208,8 +218,8 @@ public class SortedFilesMergerChanneling: SortedFilesMerger
 		{
 			writer.WriteLine(item.Line);
 			
-			LinesWritten++;
-			BytesWritten = writer.BaseStream.Position;
+			logger.LinesWritten++;
+			logger.BytesWritten = writer.BaseStream.Position;
 			
 			var batch = batches[item.SourceIndex];
 
@@ -247,6 +257,7 @@ public class SortedFilesMergerChanneling: SortedFilesMerger
 			Debug.Assert(b == null || b.ReaderIndex == b.Count);
 		}
 
-		return BytesWritten;
+		writer.Flush();
+		return writer.BaseStream.Position;
 	}
 }
