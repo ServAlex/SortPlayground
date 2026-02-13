@@ -199,9 +199,16 @@ public class LargeFileSorter
 		{
 			//Stopwatch sw = Stopwatch.StartNew();
 			// parse
-			var estimatedLines = chunk.FilledLength / _empiricalConservativeLineLength;
-			var records = new Line[estimatedLines];
+			//var estimatedLines = chunk.FilledLength / _empiricalConservativeLineLength;
+			var exactLines = 0;
+			for (var i = 0; i < chunk.FilledLength; i++)
+			{
+				if (chunk.Span[..chunk.FilledLength][i] == '\n')
+					exactLines++;
+			}
+			//var countTime = sw.ElapsedMilliseconds;
 					
+			var records = new Line[exactLines];
 			var count = Line.ParseLines(chunk.Span[..chunk.FilledLength], ref records);
 					
 			// sort
@@ -211,6 +218,8 @@ public class LargeFileSorter
 			//_logger.LogSingleMessage($"sorted chunk with {count} lines {chunk.FilledLength} chars in {sw.ElapsedMilliseconds} ms");
 			
 			var sortedChunk = new SortedChunk(records, chunk, _maxRank, count);
+			
+			//_logger.LogSingleMessage($"estimated lines: {sum} exact lines: {sum} count time {countTime} overall {sw.ElapsedMilliseconds}");
 			await mergeInMemoryChannel.Writer.WriteAsync(sortedChunk);
 		}
 	}
