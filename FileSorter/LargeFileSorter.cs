@@ -15,7 +15,6 @@ public class LargeFileSorter
 	private readonly int _queueLength;
 	private readonly int _baseChunkSize;
 	private readonly int _memoryBudgetMb;
-	private readonly int _empiricalConservativeLineLength;
 	
 	private readonly int _maxRank;
 	private readonly SortedChunk?[] _sortedChunks;
@@ -39,7 +38,6 @@ public class LargeFileSorter
 		_queueLength = options.QueueLength;
 		_baseChunkSize = options.BaseChunkSizeMb * 1024 * 1024;
 		_memoryBudgetMb = options.MemoryBudgetGb * 1024;
-		_empiricalConservativeLineLength = options.EmpiricalConservativeLineLength;
 		
 		_maxRank = MaxRank(options.MaxInMemoryChunkSizeMb * 1024 * 1024, _baseChunkSize);
 		_sortedChunks = new SortedChunk?[_maxRank + 1];
@@ -133,7 +131,6 @@ public class LargeFileSorter
 
 	private async Task ReadInputFileAsync(string fileName, Channel<CharChunk> sortChannel)
 	{
-//#		Log("Started reading");
 		_logger.LogSingleMessage($"Started reading {fileName}");
 
 		using var reader = new StreamReader(
@@ -197,29 +194,23 @@ public class LargeFileSorter
 	{
 		await foreach (var chunk in sortChannel.Reader.ReadAllAsync())
 		{
-			//Stopwatch sw = Stopwatch.StartNew();
-			// parse
-			//var estimatedLines = chunk.FilledLength / _empiricalConservativeLineLength;
-			var exactLines = 0;
+			var linesCount = 0;
 			for (var i = 0; i < chunk.FilledLength; i++)
 			{
 				if (chunk.Span[..chunk.FilledLength][i] == '\n')
-					exactLines++;
+					linesCount++;
 			}
-			//var countTime = sw.ElapsedMilliseconds;
 					
-			var records = new Line[exactLines];
+			// parse
+			var records = new Line[linesCount];
 			var count = Line.ParseLines(chunk.Span[..chunk.FilledLength], ref records);
 					
 			// sort
 			var comparer = new LineComparer(chunk.Buffer);
 			Array.Sort(records, 0, count, comparer);
-			
 			//_logger.LogSingleMessage($"sorted chunk with {count} lines {chunk.FilledLength} chars in {sw.ElapsedMilliseconds} ms");
 			
 			var sortedChunk = new SortedChunk(records, chunk, _maxRank, count);
-			
-			//_logger.LogSingleMessage($"estimated lines: {sum} exact lines: {sum} count time {countTime} overall {sw.ElapsedMilliseconds}");
 			await mergeInMemoryChannel.Writer.WriteAsync(sortedChunk);
 		}
 	}
@@ -247,7 +238,6 @@ public class LargeFileSorter
 					_sortedChunks[chunk.ChunkRank] = null;
 				}
 
-//#				Log($"merging chunks of rank {chunk.ChunkRank}");
 				if (chunk.ChunkRank == 0)
 				{
 					// can't merge this to memory, merge directly to file
@@ -255,7 +245,7 @@ public class LargeFileSorter
 					break;
 				}
 
-				// merge
+				// merge in memory
 				var newSorted = new SortedChunk(chunk, second);
 
 				chunk = newSorted;
