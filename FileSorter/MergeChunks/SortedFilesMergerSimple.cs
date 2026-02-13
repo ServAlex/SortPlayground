@@ -1,7 +1,6 @@
-using System.Diagnostics;
 using System.Text;
 
-namespace FileGenerator.FileSorter.MergeFiles;
+namespace FileGenerator.FileSorter.MergeChunks;
 
 public class SortedFilesMergerSimple
 {

@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
 
-namespace FileGenerator.FileSorter.MergeFiles;
+namespace FileGenerator.FileSorter.MergeChunks;
 
 public class SortedFilesMergerChanneling(FileProgressLogger logger)
 {

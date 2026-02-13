@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
-using FileGenerator.FileSorter.MergeFiles;
+using FileGenerator.FileSorter.MergeChunks;
 
 namespace FileGenerator.FileSorter;
 

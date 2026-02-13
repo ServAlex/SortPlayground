@@ -1,4 +1,4 @@
-namespace FileGenerator.FileSorter.MergeFiles;
+namespace FileGenerator.FileSorter.MergeChunks;
 
 public readonly struct SimpleMergeItem
 {
