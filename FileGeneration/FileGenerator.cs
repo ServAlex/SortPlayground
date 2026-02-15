@@ -4,9 +4,7 @@ namespace FileGenerator.FileGeneration;
 
 public class FileGenerator
 {
-	private const string FileName = "test.txt";
 	private const int StringPartMaxLength = 100;
-	
 	private const int BatchSize = 512;
 	
 	private static readonly string[] Words = [
@@ -30,10 +28,10 @@ public class FileGenerator
 		"peach"
 	];
 	
-	public void GenerateFileSingleThreadedBatched(int fileSizeMb)
+	public void GenerateFileSingleThreadedBatched(string fileName, int fileSizeMb)
 	{
 		using var writer = new StreamWriter(
-			FileName, 
+			fileName, 
 			Encoding.UTF8, 
 			new FileStreamOptions
 			{

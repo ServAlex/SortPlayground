@@ -21,7 +21,9 @@ public class SortedFilesMergerChanneling(FileProgressLogger logger)
 		
 		var files = new DirectoryInfo(directoryName).GetFiles();
 		var chunksCount = files.Length;
-		//todo: check for no files
+		if (chunksCount == 0)
+			throw new InvalidOperationException($"No chunk files found in '{directoryName}'. Nothing to merge.");
+		
 		var availableThreads = Environment.ProcessorCount;
 		var intermediateMergeThreads =
 			Math.Min(
@@ -187,7 +189,7 @@ public class SortedFilesMergerChanneling(FileProgressLogger logger)
 				BufferSize = writerBufferSize, 
 				Mode = FileMode.Create, 
 				Access = FileAccess.Write,
-				PreallocationSize = 20L * 1024 * 1024 * 1024
+				//PreallocationSize = 20L * 1024 * 1024 * 1024
 			});	
 		
 		var pq = new PriorityQueue<SimpleMergeItem, SimpleMergeKey>();

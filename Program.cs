@@ -11,13 +11,16 @@ var options = config.GetSection(nameof(LargeFileSorterOptions)).Get<LargeFileSor
 options.SortWorkerCount = Environment.ProcessorCount - 2 - options.MergeWorkerCount;
 
 const bool generateNewFile = false;
-const int fileSizeMb = 1024 * 20;
+const int sizeGb = 10;
+const int fileSizeMb = 1024 * sizeGb;
 var sw = Stopwatch.StartNew();
+
+var inputFile = $"test{sizeGb}.txt";
 
 if (generateNewFile)
 {
 	var generator = new FileGenerator.FileGeneration.FileGenerator();
-	generator.GenerateFileSingleThreadedBatched(fileSizeMb);
+	generator.GenerateFileSingleThreadedBatched(inputFile, fileSizeMb);
 	Console.WriteLine($"file generated in {sw.ElapsedMilliseconds} ms");
 }
 else
@@ -28,6 +31,7 @@ else
 var sorter = new LargeFileSorter(options, new FileProgressLogger{MemoryBudgetMb = options.MemoryBudgetGb*1024}); 
 
 sw.Restart();
-await sorter.SortFile("test.txt");
+//"sorted_channeling.txt"
+await sorter.SortFile(inputFile, $"Chunks{sizeGb}", "sorted.txt");
 Console.WriteLine($"direct sync read to channel in {sw.ElapsedMilliseconds} ms");
 
