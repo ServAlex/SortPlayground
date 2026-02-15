@@ -26,7 +26,7 @@ public class FileProgressLogger
 		Console.WriteLine();
 
 		var linesLogged = 0;
-		while (!cancellationToken.IsCancellationRequested)
+		while (!cancellationToken.WaitHandle.WaitOne(200))
 		{
 			// move cursor, cross-platform way
 			Console.Write($"\e[{linesLogged}A");
@@ -77,7 +77,7 @@ public class FileProgressLogger
 			StringBuilderWriteAndReset(sb, ref linesLogged);
 
 			//Console.SetCursorPosition(0, startLine);
-			Thread.Sleep(200);
+			//Thread.Sleep(200);
 		}
 		Console.WriteLine();
 		Console.WriteLine();
