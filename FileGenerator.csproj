@@ -19,8 +19,4 @@
       </None>
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="FileSorter\ChunkInputFile\" />
-    </ItemGroup>
-
 </Project>
