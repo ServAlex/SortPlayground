@@ -1,4 +1,4 @@
-namespace FileGenerator.Options;
+namespace LargeFileSort.Configurations;
 
 public class SortOptions
 {

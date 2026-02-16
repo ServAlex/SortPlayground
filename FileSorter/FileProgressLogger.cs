@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 
-namespace FileGenerator.FileSorter;
+namespace LargeFileSort.FileSorter;
 
 public class FileProgressLogger
 {

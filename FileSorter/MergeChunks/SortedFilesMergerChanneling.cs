@@ -2,27 +2,33 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
+using LargeFileSort.Configurations;
+using Microsoft.Extensions.Options;
 
-namespace FileGenerator.FileSorter.MergeChunks;
+namespace LargeFileSort.FileSorter.MergeChunks;
 
-public class SortedFilesMergerChanneling(FileProgressLogger logger)
+public class SortedFilesMergerChanneling(
+	IOptions<PathOptions> pathOptions, 
+	IOptions<SortOptions> sortOptions, 
+	FileProgressLogger logger)
 {
-	public long MergeSortedFiles(
-		string directoryName,
-		string destinationFileName,
-		int readerBufferSize,
-		int writerBufferSize,
-		int memoryBudgetMb)
+	private readonly PathOptions _pathOptions = pathOptions.Value;
+	private readonly SortOptions _sortOptions = sortOptions.Value;
+	
+	public long MergeSortedFiles()
 	{
+		var chunksDirectoryPath = Path.Combine(_pathOptions.FilesLocation, pathOptions.Value.ChunksDirectoryBaseName);
+		var sortedFilePath = Path.Combine(_pathOptions.FilesLocation, pathOptions.Value.SortedFileName);
+		
 		var startTime = DateTime.Now;
 		Console.WriteLine();
-		Console.WriteLine($"Merging to final file {destinationFileName}");
+		Console.WriteLine($"Merging to final file {sortedFilePath}");
 		Console.WriteLine();
 		
-		var files = new DirectoryInfo(directoryName).GetFiles();
+		var files = new DirectoryInfo(chunksDirectoryPath).GetFiles();
 		var chunksCount = files.Length;
 		if (chunksCount == 0)
-			throw new InvalidOperationException($"No chunk files found in '{directoryName}'. Nothing to merge.");
+			throw new InvalidOperationException($"No chunk files found in '{chunksDirectoryPath}'. Nothing to merge.");
 		
 		var availableThreads = Environment.ProcessorCount;
 		var intermediateMergeThreads =
@@ -33,7 +39,7 @@ public class SortedFilesMergerChanneling(FileProgressLogger logger)
 		//var intermediateChannelCapacity = 100;
 		var batchSize = 100_000;
 		const int empiricalConstant = 600;
-		var intermediateChannelCapacity = (int)Math.Min(100, (long)memoryBudgetMb*1024*1024/batchSize/intermediateMergeThreads/empiricalConstant);
+		var intermediateChannelCapacity = (int)Math.Min(100, (long)_sortOptions.MemoryBudgetGb*1024*1024*1024/batchSize/intermediateMergeThreads/empiricalConstant);
 		
 		var intermediateChannels = Enumerable
 			.Range(0, intermediateMergeThreads)
@@ -60,14 +66,14 @@ public class SortedFilesMergerChanneling(FileProgressLogger logger)
 						MergeFiles(
 							files.Skip(q * filesPerThread).Take(filesPerThread).ToArray(),
 							intermediateChannels[q],
-							readerBufferSize,
+							_sortOptions.BufferSizeMb * 1024 * 1024,
 							batchSize,
 							q)
 					)
 				)
-			);
+		);
 		
-		var finalMergeTask = Task.Run(() => FinalMerge(intermediateChannels, destinationFileName, writerBufferSize));
+		var finalMergeTask = Task.Run(() => FinalMerge(intermediateChannels, sortedFilePath, _sortOptions.BufferSizeMb * 1024 * 1024));
 		tasks.Add(finalMergeTask);
 		
 		var loggerCancellationTokenSource = new CancellationTokenSource();

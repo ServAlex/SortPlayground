@@ -1,4 +1,4 @@
-namespace FileGenerator.FixedLengthGenerators;
+namespace LargeFileSort.Junk.FixedLengthGenerators;
 
 public class ConstantFromParamsLineGenerator: ILineGenerator
 {

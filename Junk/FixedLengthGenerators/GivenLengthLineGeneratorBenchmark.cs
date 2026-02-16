@@ -1,7 +1,7 @@
 using System.Text;
 using BenchmarkDotNet.Attributes;
 
-namespace FileGenerator.FixedLengthGenerators;
+namespace LargeFileSort.Junk.FixedLengthGenerators;
 
 [MemoryDiagnoser]
 public class GivenLengthLineGeneratorBenchmark

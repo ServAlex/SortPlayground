@@ -1,9 +1,7 @@
-using System;
-using System.IO;
 using System.Text;
 using BenchmarkDotNet.Attributes;
 
-namespace FileGenerator.FullGeneratorBenchmark;
+namespace LargeFileSort.Junk.FullGeneratorBenchmark;
 
 [MemoryDiagnoser]
 [MinWarmupCount(1)]

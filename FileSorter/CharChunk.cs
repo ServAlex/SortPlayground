@@ -1,4 +1,4 @@
-namespace FileGenerator.FileSorter;
+namespace LargeFileSort.FileSorter;
 
 public sealed class CharChunk
 {

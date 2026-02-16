@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
+using LargeFileSort.Configurations;
+using Microsoft.Extensions.Options;
 
-namespace FileGenerator.FileSorter.ChunkInputFile;
+namespace LargeFileSort.FileSorter.ChunkInputFile;
 
 public class FileChunker
 {
@@ -22,22 +24,28 @@ public class FileChunker
 	private readonly Channel<SortedChunk> _mergeInMemoryChannel ;
 	private readonly Channel<(SortedChunk, SortedChunk?)> _mergeToFileChannel;
 
-	private readonly FileProgressLogger _logger;
 
 	private int _fileChunkCounter; 
 	private long _inputFileSize;
+	
+	private readonly SortOptions _sortOptions;
+	private readonly PathOptions _pathOptions;
+	private readonly FileProgressLogger _logger;
 
-	public FileChunker(LargeFileSorterOptions options, FileProgressLogger logger)
+	public FileChunker(IOptions<SortOptions> sortOptions, IOptions<PathOptions> pathOptions, FileProgressLogger logger)
 	{
+		_sortOptions = sortOptions.Value;
+		_pathOptions = pathOptions.Value;
 		_logger = logger;
-		_bufferSize = options.BufferSizeMb * 1024 * 1024;
-		_sortWorkerCount = options.SortWorkerCount;
-		_mergeWorkerCount = options.MergeWorkerCount;
-		_queueLength = options.QueueLength;
-		_baseChunkSize = options.BaseChunkSizeMb * 1024 * 1024;
-		_memoryBudgetMb = options.MemoryBudgetGb * 1024;
+		_bufferSize = _sortOptions.BufferSizeMb * 1024 * 1024;
+		_mergeWorkerCount = _sortOptions.MergeWorkerCount;
+		//_sortWorkerCount = _sortOptions.SortWorkerCount;
+		_sortWorkerCount = Environment.ProcessorCount - 2 - _mergeWorkerCount;
+		_queueLength = _sortOptions.QueueLength;
+		_baseChunkSize = _sortOptions.BaseChunkSizeMb * 1024 * 1024;
+		_memoryBudgetMb = _sortOptions.MemoryBudgetGb * 1024;
 		
-		_maxRank = MaxRank(options.MaxInMemoryChunkSizeMb * 1024 * 1024, _baseChunkSize);
+		_maxRank = MaxRank((int)(_sortOptions.IntermediateFileSizeMaxMb/2.0 * 1024 * 1024), _baseChunkSize);
 		_sortedChunks = new SortedChunk?[_maxRank + 1];
 		
 		_sortChannel = Channel.CreateBounded<CharChunk>(
@@ -61,20 +69,23 @@ public class FileChunker
 			});
 	}
 
-	public long ChunkFileAsync(string fileName, string directoryName)
+	public long ChunkFileAsync()
 	{
 		var sw = Stopwatch.StartNew();
-		
-		if (Directory.Exists(directoryName))
+
+		var chunkDirectoryPath = Path.Combine(_pathOptions.FilesLocation, _pathOptions.ChunksDirectoryBaseName);
+		if (Directory.Exists(chunkDirectoryPath))
 		{
-			Directory.Delete(directoryName, true);
+			Directory.Delete(chunkDirectoryPath, true);
 		}
-		Directory.CreateDirectory(directoryName);
+		Directory.CreateDirectory(chunkDirectoryPath);
+		
+		var unsortedFilePath = Path.Combine(_pathOptions.FilesLocation, _pathOptions.UnsortedFileName);
 		
 		var tasks = new List<Task>
 		{
 			// file reader task
-			Task.Run(async () => await ReadInputFileAsync(fileName, _sortChannel)),
+			Task.Run(async () => await ReadInputFileAsync(unsortedFilePath, _sortChannel)),
 			
 			// chunk sorters
 			Task.WhenAll(
@@ -95,7 +106,7 @@ public class FileChunker
 				.ContinueWith(_ => FlushMergeQueue(_mergeToFileChannel)),
 			
 			// merge to file worker
-			Task.Run(async () => await MergeToFileAsync(_mergeToFileChannel, directoryName))
+			Task.Run(async () => await MergeToFileAsync(_mergeToFileChannel, chunkDirectoryPath))
 		};
 		
 		var loggerCancellationTokenSource = new CancellationTokenSource();

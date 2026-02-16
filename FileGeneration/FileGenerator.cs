@@ -1,12 +1,17 @@
 using System.Text;
+using LargeFileSort.Configurations;
+using Microsoft.Extensions.Options;
 
-namespace FileGenerator.FileGeneration;
+namespace LargeFileSort.FileGeneration;
 
-public class FileGenerator
+public class FileGenerator(IOptions<FileGenerationOptions> fileGenerationOptions, IOptions<PathOptions> pathOptions)
 {
+	private readonly FileGenerationOptions _fileGenerationOptions = fileGenerationOptions.Value;
+	private readonly PathOptions _pathOptions = pathOptions.Value;
+
 	private const int StringPartMaxLength = 100;
 	private const int BatchSize = 512;
-	
+
 	private static readonly string[] Words = [
 		"berry", 
 		"apple", 
@@ -28,10 +33,10 @@ public class FileGenerator
 		"peach"
 	];
 	
-	public void GenerateFileSingleThreadedBatched(string fileName, int fileSizeMb)
+	public void GenerateFileSingleThreadedBatched()
 	{
 		using var writer = new StreamWriter(
-			fileName, 
+			Path.Combine(_pathOptions.FilesLocation, _pathOptions.UnsortedFileName),
 			Encoding.UTF8, 
 			new FileStreamOptions
 			{
@@ -43,11 +48,11 @@ public class FileGenerator
 		var random = new Random();
 		var stringBuilder = new StringBuilder((StringPartMaxLength + 20) * BatchSize);
 		
-		while (writer.BaseStream.Length < (long)fileSizeMb * 1024 * 1024)
+		while (writer.BaseStream.Length < (long)_fileGenerationOptions.FileSizeGb * 1024 * 1024 * 1024)
 		{
 			stringBuilder.Clear();
 
-			for (int i = 0; i < BatchSize; i++)
+			for (var i = 0; i < BatchSize; i++)
 			{
 				stringBuilder.Append(random.Next()).Append(". ");
 				

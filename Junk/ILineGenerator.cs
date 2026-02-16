@@ -1,4 +1,4 @@
-namespace FileGenerator;
+namespace LargeFileSort.Junk;
 
 public interface ILineGenerator
 {

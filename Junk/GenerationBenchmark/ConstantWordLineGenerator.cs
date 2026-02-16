@@ -1,4 +1,4 @@
-namespace FileGenerator.GenerationBenchmark;
+namespace LargeFileSort.Junk.GenerationBenchmark;
 
 public class ConstantWordLineGenerator: ILineGenerator
 {
