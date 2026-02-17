@@ -1,5 +1,3 @@
-using LargeFileSort.FileSorter;
-
 namespace LargeFileSort.FileSorter;
 
 public readonly struct LineComparer(char[] buffer) : IComparer<Line>

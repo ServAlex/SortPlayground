@@ -1,5 +1,3 @@
-using LargeFileSort.FileSorter;
-
 namespace LargeFileSort.FileSorter;
 
 public class SortedChunk

@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using LargeFileSort.Configurations;
+﻿using LargeFileSort.Configurations;
 using LargeFileSort.FileSorter;
 using LargeFileSort.FileGeneration;
 using LargeFileSort.FileSorter.ChunkInputFile;
