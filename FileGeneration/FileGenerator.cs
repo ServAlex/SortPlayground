@@ -1,10 +1,12 @@
+using System.Diagnostics;
 using System.Text;
 using LargeFileSort.Configurations;
+using LargeFileSort.FileSorter;
 using Microsoft.Extensions.Options;
 
 namespace LargeFileSort.FileGeneration;
 
-public class FileGenerator(IOptions<FileGenerationOptions> fileGenerationOptions, IOptions<PathOptions> pathOptions)
+public class FileGenerator(IOptions<FileGenerationOptions> fileGenerationOptions, IOptions<PathOptions> pathOptions, FileProgressLogger logger)
 {
 	private readonly FileGenerationOptions _fileGenerationOptions = fileGenerationOptions.Value;
 	private readonly PathOptions _pathOptions = pathOptions.Value;
@@ -44,6 +46,12 @@ public class FileGenerator(IOptions<FileGenerationOptions> fileGenerationOptions
 				Mode = FileMode.Create, 
 				Access = FileAccess.Write
 			});
+		
+		var sw = Stopwatch.StartNew();
+		Console.WriteLine($"Generating {_pathOptions.UnsortedFileName} file, size {_fileGenerationOptions.FileSizeGb} GB");
+		var loggerCancellationTokenSource = new CancellationTokenSource();
+		// ReSharper disable once MethodSupportsCancellation
+		Task.Run(() => logger.LogState(DateTime.Now, null, loggerCancellationTokenSource.Token));
 
 		var random = new Random();
 		var stringBuilder = new StringBuilder((StringPartMaxLength + 20) * BatchSize);
@@ -70,9 +78,12 @@ public class FileGenerator(IOptions<FileGenerationOptions> fileGenerationOptions
 				}
 				stringBuilder.AppendLine();
 			}
-			//Console.WriteLine(stringBuilder.Length);
 				
 			writer.Write(stringBuilder);
+			logger.BytesWritten += stringBuilder.Length;
 		}
+		
+		loggerCancellationTokenSource.Cancel();
+		Console.WriteLine($"File generated with length {writer.BaseStream.Length / 1024 / 1024 } MB in {sw.ElapsedMilliseconds/1000} s");
 	}
 }
