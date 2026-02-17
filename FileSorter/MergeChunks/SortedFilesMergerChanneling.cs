@@ -195,34 +195,36 @@ public class SortedFilesMergerChanneling(
 				BufferSize = writerBufferSize, 
 				Mode = FileMode.Create, 
 				Access = FileAccess.Write,
-				//PreallocationSize = 20L * 1024 * 1024 * 1024
 			});	
 		
-		var pq = new PriorityQueue<SimpleMergeItem, SimpleMergeKey>();
+		var priorityQueue = new PriorityQueue<SimpleMergeItem, SimpleMergeKey>();
 		var batches = new MergeBatch[intermediateResultsChannels.Length];
 		var completed = new bool[intermediateResultsChannels.Length];
 		
 		// populate queue
 		for (var i = 0; i < intermediateResultsChannels.Length; i++)
 		{
-			var sw = new SpinWait();
-			while (!intermediateResultsChannels[i].Reader.TryRead(out batches[i]))
+			var spinWait = new SpinWait();
+			MergeBatch? nullableBatch;
+			while (!intermediateResultsChannels[i].Reader.TryRead(out nullableBatch))
 			{
 				if (intermediateResultsChannels[i].Reader.Completion.IsCompleted)
 				{
 					completed[i] = true;
 					break;
 				}
-				sw.SpinOnce();
+				spinWait.SpinOnce();
 			}
-			var batch = batches[i];
+
+			var batch = batches[i] = nullableBatch ??
+			                         throw new InvalidOperationException($"Channel {i} completed without any data.");
 			//var batch = batches[i] = intermediateResultsChannels[i].Reader.ReadAsync().GetAwaiter().GetResult();
-			var item = batch.Items[batch.ReaderIndex++];
-			pq.Enqueue(new SimpleMergeItem(item, i), new SimpleMergeKey(item));
+			var item = batch.Items[batch.CurrentReadIndex++];
+			priorityQueue.Enqueue(new SimpleMergeItem(item, i), new SimpleMergeKey(item));
 		}
 		
 		// run until the queue is empty
-		while (pq.TryDequeue(out var item, out _))
+		while (priorityQueue.TryDequeue(out var item, out _))
 		{
 			writer.WriteLine(item.Line);
 			
@@ -231,38 +233,41 @@ public class SortedFilesMergerChanneling(
 			
 			var batch = batches[item.SourceIndex];
 
-			if (batch.ReaderIndex == batch.Count)
+			if (batch.CurrentReadIndex == batch.Count)
 			{
 				// no more items in batch, return and load next
 				ArrayPool<SimpleMergeItem>.Shared.Return(batch.Items, clearArray: false);
 				
 				// load batch or complete
-				var sw = new SpinWait();
-				while (!intermediateResultsChannels[item.SourceIndex].Reader.TryRead(out batches[item.SourceIndex]))
+				var spinWait = new SpinWait();
+				MergeBatch? nullableBatch;
+				while (!intermediateResultsChannels[item.SourceIndex].Reader.TryRead(out nullableBatch))
 				{
 					if (intermediateResultsChannels[item.SourceIndex].Reader.Completion.IsCompleted)
 					{
 						completed[item.SourceIndex] = true;
 						break;
 					}
-					sw.SpinOnce();
+					spinWait.SpinOnce();
 				}
 				
 				if (completed[item.SourceIndex])
 				{
 					continue;
 				}
+
+				batch = batches[item.SourceIndex] = nullableBatch ??
+				                                    throw new InvalidOperationException(
+					                                    $"Channel {item.SourceIndex} completed without any data.");
 			}
 			
-			batch = batches[item.SourceIndex];
-			
-			var next = batch.Items[batch.ReaderIndex++];
-			pq.Enqueue(new SimpleMergeItem(next, item.SourceIndex), new SimpleMergeKey(next));
+			var next = batch.Items[batch.CurrentReadIndex++];
+			priorityQueue.Enqueue(new SimpleMergeItem(next, item.SourceIndex), new SimpleMergeKey(next));
 		}
 		
 		foreach (var b in batches)
 		{
-			Debug.Assert(b == null || b.ReaderIndex == b.Count);
+			Debug.Assert(b == null || b.CurrentReadIndex == b.Count);
 		}
 
 		writer.Flush();
