@@ -1,19 +1,21 @@
 using System.Diagnostics;
 using System.Text;
+using LargeFileSort.Configurations;
+using Microsoft.Extensions.Options;
 
 namespace LargeFileSort.FileSorter;
 
-public class FileProgressLogger
+public class FileProgressLogger(IOptions<SortOptions> sortOptions)
 {
 	public long LinesWritten { get; set;}
 	public long BytesWritten { get; set;}
 	public long BytesRead { get; set;}
-	public int MemoryBudgetMb { get; set; }
 	public bool IsCountersSynchronized { get; set; }
 	
 	private DateTime StartTime { get; set;}
 	
 	private StringBuilder _sb = new();
+	private readonly SortOptions _sortOptions = sortOptions.Value;
 
 	public void LogState(DateTime startTime, Func<string>? getCustomLine, CancellationToken cancellationToken)
 	{
@@ -70,7 +72,7 @@ public class FileProgressLogger
 			var gcInfo = GC.GetGCMemoryInfo();
 			var memoryLoad = gcInfo.MemoryLoadBytes / 1024d / 1024 / 1024;
 			var totalSystemMemoryGb = gcInfo.TotalAvailableMemoryBytes / 1024d / 1024 / 1024;
-			sb.Append($"   RAM budget:{workingSetGb,5:F1} / {MemoryBudgetMb / 1024d:F1} GB");
+			sb.Append($"   RAM budget:{workingSetGb,5:F1} / {_sortOptions.MemoryBudgetGb:F1} GB");
 			sb.Append($"    System memory load: {memoryLoad,5:F1} GB");
 			sb.Append($"    Total RAM: {totalSystemMemoryGb,5:F1} GB");
 			sb.Append($"    Pause: {gcInfo.PauseTimePercentage,5:F1}%");
