@@ -1,10 +1,10 @@
-namespace FileGenerator.FileSorter.MergeChunks;
+namespace LargeFileSort.FileSorter.MergeChunks;
 
 sealed class MergeBatch
 {
 	public SimpleMergeItem[] Items;
 	public int Count;
-	public int ReaderIndex;
+	public int CurrentReadIndex;
 
 	public MergeBatch(SimpleMergeItem[] items)
 	{

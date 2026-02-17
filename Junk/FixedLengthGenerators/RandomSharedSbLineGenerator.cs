@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace FileGenerator.FixedLengthGenerators;
+namespace LargeFileSort.Junk.FixedLengthGenerators;
 
 public class RandomSharedSbLineGenerator
 {

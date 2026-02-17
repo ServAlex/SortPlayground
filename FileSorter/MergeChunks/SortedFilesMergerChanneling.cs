@@ -2,27 +2,33 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
+using LargeFileSort.Configurations;
+using Microsoft.Extensions.Options;
 
-namespace FileGenerator.FileSorter.MergeChunks;
+namespace LargeFileSort.FileSorter.MergeChunks;
 
-public class SortedFilesMergerChanneling(FileProgressLogger logger)
+public class SortedFilesMergerChanneling(
+	IOptions<PathOptions> pathOptions, 
+	IOptions<SortOptions> sortOptions, 
+	FileProgressLogger logger)
 {
-	public long MergeSortedFiles(
-		string directoryName,
-		string destinationFileName,
-		int readerBufferSize,
-		int writerBufferSize,
-		int memoryBudgetMb)
+	private readonly PathOptions _pathOptions = pathOptions.Value;
+	private readonly SortOptions _sortOptions = sortOptions.Value;
+	
+	public long MergeSortedFiles()
 	{
+		var chunksDirectoryPath = Path.Combine(_pathOptions.FilesLocation, pathOptions.Value.ChunksDirectoryBaseName);
+		var sortedFilePath = Path.Combine(_pathOptions.FilesLocation, pathOptions.Value.SortedFileName);
+		
 		var startTime = DateTime.Now;
 		Console.WriteLine();
-		Console.WriteLine($"Merging to final file {destinationFileName}");
+		Console.WriteLine($"Merging to final file {sortedFilePath}");
 		Console.WriteLine();
 		
-		var files = new DirectoryInfo(directoryName).GetFiles();
+		var files = new DirectoryInfo(chunksDirectoryPath).GetFiles();
 		var chunksCount = files.Length;
 		if (chunksCount == 0)
-			throw new InvalidOperationException($"No chunk files found in '{directoryName}'. Nothing to merge.");
+			throw new InvalidOperationException($"No chunk files found in '{chunksDirectoryPath}'. Nothing to merge.");
 		
 		var availableThreads = Environment.ProcessorCount;
 		var intermediateMergeThreads =
@@ -33,7 +39,7 @@ public class SortedFilesMergerChanneling(FileProgressLogger logger)
 		//var intermediateChannelCapacity = 100;
 		var batchSize = 100_000;
 		const int empiricalConstant = 600;
-		var intermediateChannelCapacity = (int)Math.Min(100, (long)memoryBudgetMb*1024*1024/batchSize/intermediateMergeThreads/empiricalConstant);
+		var intermediateChannelCapacity = (int)Math.Min(100, (long)_sortOptions.MemoryBudgetGb*1024*1024*1024/batchSize/intermediateMergeThreads/empiricalConstant);
 		
 		var intermediateChannels = Enumerable
 			.Range(0, intermediateMergeThreads)
@@ -60,14 +66,14 @@ public class SortedFilesMergerChanneling(FileProgressLogger logger)
 						MergeFiles(
 							files.Skip(q * filesPerThread).Take(filesPerThread).ToArray(),
 							intermediateChannels[q],
-							readerBufferSize,
+							_sortOptions.BufferSizeMb * 1024 * 1024,
 							batchSize,
 							q)
 					)
 				)
-			);
+		);
 		
-		var finalMergeTask = Task.Run(() => FinalMerge(intermediateChannels, destinationFileName, writerBufferSize));
+		var finalMergeTask = Task.Run(() => FinalMerge(intermediateChannels, sortedFilePath, _sortOptions.BufferSizeMb * 1024 * 1024));
 		tasks.Add(finalMergeTask);
 		
 		var loggerCancellationTokenSource = new CancellationTokenSource();
@@ -189,34 +195,36 @@ public class SortedFilesMergerChanneling(FileProgressLogger logger)
 				BufferSize = writerBufferSize, 
 				Mode = FileMode.Create, 
 				Access = FileAccess.Write,
-				//PreallocationSize = 20L * 1024 * 1024 * 1024
 			});	
 		
-		var pq = new PriorityQueue<SimpleMergeItem, SimpleMergeKey>();
+		var priorityQueue = new PriorityQueue<SimpleMergeItem, SimpleMergeKey>();
 		var batches = new MergeBatch[intermediateResultsChannels.Length];
 		var completed = new bool[intermediateResultsChannels.Length];
 		
 		// populate queue
 		for (var i = 0; i < intermediateResultsChannels.Length; i++)
 		{
-			var sw = new SpinWait();
-			while (!intermediateResultsChannels[i].Reader.TryRead(out batches[i]))
+			var spinWait = new SpinWait();
+			MergeBatch? nullableBatch;
+			while (!intermediateResultsChannels[i].Reader.TryRead(out nullableBatch))
 			{
 				if (intermediateResultsChannels[i].Reader.Completion.IsCompleted)
 				{
 					completed[i] = true;
 					break;
 				}
-				sw.SpinOnce();
+				spinWait.SpinOnce();
 			}
-			var batch = batches[i];
+
+			var batch = batches[i] = nullableBatch ??
+			                         throw new InvalidOperationException($"Channel {i} completed without any data.");
 			//var batch = batches[i] = intermediateResultsChannels[i].Reader.ReadAsync().GetAwaiter().GetResult();
-			var item = batch.Items[batch.ReaderIndex++];
-			pq.Enqueue(new SimpleMergeItem(item, i), new SimpleMergeKey(item));
+			var item = batch.Items[batch.CurrentReadIndex++];
+			priorityQueue.Enqueue(new SimpleMergeItem(item, i), new SimpleMergeKey(item));
 		}
 		
 		// run until the queue is empty
-		while (pq.TryDequeue(out var item, out _))
+		while (priorityQueue.TryDequeue(out var item, out _))
 		{
 			writer.WriteLine(item.Line);
 			
@@ -225,38 +233,41 @@ public class SortedFilesMergerChanneling(FileProgressLogger logger)
 			
 			var batch = batches[item.SourceIndex];
 
-			if (batch.ReaderIndex == batch.Count)
+			if (batch.CurrentReadIndex == batch.Count)
 			{
 				// no more items in batch, return and load next
 				ArrayPool<SimpleMergeItem>.Shared.Return(batch.Items, clearArray: false);
 				
 				// load batch or complete
-				var sw = new SpinWait();
-				while (!intermediateResultsChannels[item.SourceIndex].Reader.TryRead(out batches[item.SourceIndex]))
+				var spinWait = new SpinWait();
+				MergeBatch? nullableBatch;
+				while (!intermediateResultsChannels[item.SourceIndex].Reader.TryRead(out nullableBatch))
 				{
 					if (intermediateResultsChannels[item.SourceIndex].Reader.Completion.IsCompleted)
 					{
 						completed[item.SourceIndex] = true;
 						break;
 					}
-					sw.SpinOnce();
+					spinWait.SpinOnce();
 				}
 				
 				if (completed[item.SourceIndex])
 				{
 					continue;
 				}
+
+				batch = batches[item.SourceIndex] = nullableBatch ??
+				                                    throw new InvalidOperationException(
+					                                    $"Channel {item.SourceIndex} completed without any data.");
 			}
 			
-			batch = batches[item.SourceIndex];
-			
-			var next = batch.Items[batch.ReaderIndex++];
-			pq.Enqueue(new SimpleMergeItem(next, item.SourceIndex), new SimpleMergeKey(next));
+			var next = batch.Items[batch.CurrentReadIndex++];
+			priorityQueue.Enqueue(new SimpleMergeItem(next, item.SourceIndex), new SimpleMergeKey(next));
 		}
 		
 		foreach (var b in batches)
 		{
-			Debug.Assert(b == null || b.ReaderIndex == b.Count);
+			Debug.Assert(b == null || b.CurrentReadIndex == b.Count);
 		}
 
 		writer.Flush();

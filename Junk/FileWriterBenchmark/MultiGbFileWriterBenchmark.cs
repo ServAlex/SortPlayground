@@ -1,7 +1,7 @@
 using System.Text;
 using BenchmarkDotNet.Attributes;
 
-namespace FileGenerator.FileWriterBenchmark;
+namespace LargeFileSort.Junk.FileWriterBenchmark;
 
 [MemoryDiagnoser]
 public class MultiGbFileWriterBenchmark

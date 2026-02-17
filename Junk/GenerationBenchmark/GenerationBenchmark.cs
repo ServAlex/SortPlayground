@@ -1,7 +1,7 @@
 using System.Text;
 using BenchmarkDotNet.Attributes;
 
-namespace FileGenerator.GenerationBenchmark;
+namespace LargeFileSort.Junk.GenerationBenchmark;
 
 [MemoryDiagnoser]
 public class GenerationBenchmark

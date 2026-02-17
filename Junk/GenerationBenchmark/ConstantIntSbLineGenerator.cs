@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace FileGenerator.GenerationBenchmark;
+namespace LargeFileSort.Junk.GenerationBenchmark;
 
 public class ConstantIntSbLineGenerator: ILineGenerator
 {

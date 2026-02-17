@@ -7,6 +7,7 @@ riderModule.iml
 *.user
 
 Chunks/
+Chunks*
 
 .idea/
 *.txt

@@ -1,37 +1,38 @@
 ﻿using System.Diagnostics;
-using FileGenerator.FileSorter;
+using LargeFileSort.Configurations;
+using LargeFileSort.FileSorter;
+using LargeFileSort.FileGeneration;
+using LargeFileSort.FileSorter.ChunkInputFile;
+using LargeFileSort.FileSorter.MergeChunks;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
-var config = new ConfigurationBuilder()
-	.AddJsonFile("appsettings.json")
-	.Build();
-
-var options = config.GetSection(nameof(LargeFileSorterOptions)).Get<LargeFileSorterOptions>() 
-              ?? throw new InvalidOperationException("Config not found");
-options.SortWorkerCount = Environment.ProcessorCount - 2 - options.MergeWorkerCount;
-
-const bool generateNewFile = false;
-const int sizeGb = 10;
-const int fileSizeMb = 1024 * sizeGb;
-var sw = Stopwatch.StartNew();
-
-var inputFile = $"test{sizeGb}.txt";
-
-if (generateNewFile)
+var switchMappings = new Dictionary<string, string>
 {
-	var generator = new FileGenerator.FileGeneration.FileGenerator();
-	generator.GenerateFileSingleThreadedBatched(inputFile, fileSizeMb);
-	Console.WriteLine($"file generated in {sw.ElapsedMilliseconds} ms");
-}
-else
-{
-	Console.WriteLine("using old file");
-}
+	{ "-m", $"{nameof(LargeFileSorterOptions)}:{nameof(LargeFileSorterOptions.MemoryBudgetGb)}" },
+};
 
-var sorter = new LargeFileSorter(options, new FileProgressLogger{MemoryBudgetMb = options.MemoryBudgetGb*1024}); 
+var builder = Host.CreateApplicationBuilder(args);
+builder.Configuration.AddJsonFile("appsettings.json", optional:false, reloadOnChange:false);
+builder.Configuration.AddCommandLine(args, switchMappings);
 
-sw.Restart();
-//"sorted_channeling.txt"
-await sorter.SortFile(inputFile, $"Chunks{sizeGb}", "sorted.txt");
-Console.WriteLine($"direct sync read to channel in {sw.ElapsedMilliseconds} ms");
+builder.Services.AddTransient<FileGenerator>();
+builder.Services.AddTransient<LargeFileSorter>();
+builder.Services.AddTransient<FileChunker>();
+builder.Services.AddTransient<SortedFilesMergerChanneling>();
+builder.Services.AddTransient<FileProgressLogger>();
 
+builder.Services.Configure<LargeFileSorterOptions>(builder.Configuration.GetSection(nameof(LargeFileSorterOptions)));
+builder.Services.Configure<FileGenerationOptions>(builder.Configuration.GetSection(nameof(FileGenerationOptions)));
+builder.Services.Configure<PathOptions>(builder.Configuration.GetSection(nameof(PathOptions)));
+// validate, especially sortOptions.IntermediateFileSizeMaxMb <= 2047
+builder.Services.Configure<SortOptions>(builder.Configuration.GetSection(nameof(SortOptions)));
+
+using var host = builder.Build();
+
+var generator = host.Services.GetRequiredService<FileGenerator>();
+generator.GenerateFileSingleThreadedBatched();
+
+var sorter = host.Services.GetRequiredService<LargeFileSorter>();
+await sorter.SortFile();
