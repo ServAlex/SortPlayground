@@ -9,12 +9,37 @@ using Microsoft.Extensions.Hosting;
 
 var switchMappings = new Dictionary<string, string>
 {
-	{ "-m", $"{nameof(LargeFileSorterOptions)}:{nameof(LargeFileSorterOptions.MemoryBudgetGb)}" },
+	{ "--generate", $"{nameof(FileGenerationOptions)}:{nameof(FileGenerationOptions.Enabled)}" },
+	{ "--reuse", $"{nameof(FileGenerationOptions)}:{nameof(FileGenerationOptions.Reuse)}" },
+	{ "--size", $"{nameof(FileGenerationOptions)}:{nameof(FileGenerationOptions.FileSizeGb)}" },
+	
+	{ "--sort", $"{nameof(SortOptions)}:{nameof(SortOptions.Enabled)}" },
+	{ "--chunkFileSizeMb", $"{nameof(SortOptions)}:{nameof(SortOptions.IntermediateFileSizeMaxMb)}" },
+	{ "--baseChunkSizeMb", $"{nameof(SortOptions)}:{nameof(SortOptions.BaseChunkSizeMb)}" },
+	{ "--memoryBudgetGb", $"{nameof(SortOptions)}:{nameof(LargeFileSorterOptions.MemoryBudgetGb)}" },
+	
+	{ "--path", $"{nameof(PathOptions)}:{nameof(PathOptions.FilesLocation)}" },
+	{ "--delete", $"{nameof(PathOptions)}:{nameof(PathOptions.DeleteAllCreatedFiles)}" },
 };
+var builder = new HostApplicationBuilder(new HostApplicationBuilderSettings()
+{
+	DisableDefaults = true,
+	ContentRootPath = Directory.GetCurrentDirectory(),
+	Args = args
+});
+//var builder = Host.CreateApplicationBuilder(args);
+//Console.WriteLine(builder.Configuration.GetDebugView());
 
-var builder = Host.CreateApplicationBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.json", optional:false, reloadOnChange:false);
 builder.Configuration.AddCommandLine(args, switchMappings);
+
+// builder.Configuration.AddInMemoryCollection(new List<KeyValuePair<string, string?>>
+// {
+// 	new( $"{nameof(SortOptions)}:{nameof(LargeFileSorterOptions.MemoryBudgetGb)}", "6")
+// });
+
+Console.WriteLine(builder.Configuration.GetDebugView());
+//Console.WriteLine(string.Join(',', args));
 
 builder.Services.AddTransient<FileGenerator>();
 builder.Services.AddTransient<LargeFileSorter>();
@@ -22,13 +47,19 @@ builder.Services.AddTransient<FileChunker>();
 builder.Services.AddTransient<SortedFilesMergerChanneling>();
 builder.Services.AddTransient<FileProgressLogger>();
 
-builder.Services.Configure<LargeFileSorterOptions>(builder.Configuration.GetSection(nameof(LargeFileSorterOptions)));
-builder.Services.Configure<FileGenerationOptions>(builder.Configuration.GetSection(nameof(FileGenerationOptions)));
-builder.Services.Configure<PathOptions>(builder.Configuration.GetSection(nameof(PathOptions)));
-// validate, especially sortOptions.IntermediateFileSizeMaxMb <= 2047
-builder.Services.Configure<SortOptions>(builder.Configuration.GetSection(nameof(SortOptions)));
+builder.Services.AddOptions<FileGenerationOptions>()
+	.Bind(builder.Configuration.GetSection(nameof(FileGenerationOptions)))
+	.ValidateDataAnnotations();
+builder.Services.AddOptions<PathOptions>()
+	.Bind(builder.Configuration.GetSection(nameof(PathOptions)))
+	.ValidateDataAnnotations();
+builder.Services.AddOptions<SortOptions>()
+	.Bind(builder.Configuration.GetSection(nameof(SortOptions)))
+	.ValidateDataAnnotations();
 
 using var host = builder.Build();
+
+OptionsValidator.Validate(host.Services);
 
 var generator = host.Services.GetRequiredService<FileGenerator>();
 generator.GenerateFileSingleThreadedBatched();

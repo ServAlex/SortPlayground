@@ -1,11 +1,23 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace LargeFileSort.Configurations;
 
-public class PathOptions
+public sealed class PathOptions
 {
-	public string UnsortedFileName { get; set; }
-	public string SortedFileName { get; set; }
-	public string FilesLocation { get; set; }
-	public string ChunksDirectoryBaseName { get; set; }
-	public bool KeepChunks { get; set; }
-	public bool DeleteAllCreatedFiles { get; set; }
+	[Required]
+	public required bool DeleteAllCreatedFiles { get; set; }
+	
+	[Required]
+	public required string UnsortedFileName { get; set; }
+	
+	[Required]
+	public required string SortedFileName { get; set; }
+	
+	public required string FilesLocation { get; set; }
+	
+	[Required]
+	public required string ChunksDirectoryBaseName { get; set; }
+	
+	[Required]
+	public required bool KeepChunks { get; set; }
 }
