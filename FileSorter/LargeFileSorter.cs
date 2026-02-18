@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using LargeFileSort.FileSorter.ChunkInputFile;
 using LargeFileSort.FileSorter.MergeChunks;
 
@@ -16,6 +17,7 @@ public class LargeFileSorter
 
 	public async Task SortFile()
 	{
+		var sw = Stopwatch.StartNew();
 		var inputFileSize = _fileChunker.ChunkFileAsync();
 
 		//var outputFileSize = SortedFilesMerger.MergeSortedFiles("Chunks", "sorted.txt", 512 * 1024, 512 * 1024);
@@ -24,9 +26,8 @@ public class LargeFileSorter
 		//var outputFileSize2Stage = new SortedFilesMergerIntermediateFiles().MergeSortedFiles("Chunks", "sorted_2stage.txt", 40 * 1024 * 1024, 40 * 1024 * 1024);
 		var outputFileSizeChanneling = _sortedFilesMerger.MergeSortedFiles();
 		
-		Console.WriteLine($"Input file size: {inputFileSize} B");
-		//Console.WriteLine($"Output file size simple: {outputFileSizeSimple} B");
-		//Console.WriteLine($"Output file size 2 stage: {outputFileSize2Stage} B");
-		Console.WriteLine($"Output file size channeling: {outputFileSizeChanneling} B");
+		Console.WriteLine($"Full sort took: {sw.ElapsedMilliseconds/1000.0:F1} s");
+		Console.WriteLine($"Unsorted file size: {inputFileSize} B");
+		Console.WriteLine($"Sorted file size: {outputFileSizeChanneling} B");
 	}
 }

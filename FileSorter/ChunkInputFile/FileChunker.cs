@@ -72,6 +72,7 @@ public class FileChunker
 	public long ChunkFileAsync()
 	{
 		var sw = Stopwatch.StartNew();
+		Console.WriteLine();
 
 		var chunkDirectoryPath = Path.Combine(_pathOptions.FilesLocation, _pathOptions.ChunksDirectoryBaseName);
 		if (Directory.Exists(chunkDirectoryPath))
@@ -120,7 +121,8 @@ public class FileChunker
 		
 		loggerCancellationTokenSource.Cancel();
 		
-		Console.WriteLine($"Split to sorted files in: {sw.ElapsedMilliseconds} ms");
+		Console.WriteLine();
+		Console.WriteLine($"Split to sorted files in: {sw.ElapsedMilliseconds/1000.0:F1} ms");
 		Console.WriteLine();
 		
 		return _inputFileSize;

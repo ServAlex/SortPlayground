@@ -20,10 +20,10 @@ public class SortedFilesMergerChanneling(
 		var chunksDirectoryPath = Path.Combine(_pathOptions.FilesLocation, pathOptions.Value.ChunksDirectoryBaseName);
 		var sortedFilePath = Path.Combine(_pathOptions.FilesLocation, pathOptions.Value.SortedFileName);
 		
-		var startTime = DateTime.Now;
 		Console.WriteLine();
-		Console.WriteLine($"Merging to final file {sortedFilePath}");
+		Console.WriteLine($"Merging to final file {sortedFilePath}: several Stage 1 mergers merge files to batches in parallel, feed batches to a single Stage 2 merger which writes to final file");
 		Console.WriteLine();
+		var sw = Stopwatch.StartNew();
 		
 		var files = new DirectoryInfo(chunksDirectoryPath).GetFiles();
 		var chunksCount = files.Length;
@@ -78,7 +78,7 @@ public class SortedFilesMergerChanneling(
 		
 		var loggerCancellationTokenSource = new CancellationTokenSource();
 		// ReSharper disable once MethodSupportsCancellation
-		Task.Run(() => logger.LogState(startTime, () =>
+		Task.Run(() => logger.LogState(DateTime.Now, () =>
 		{
 			var stringBuilder = new StringBuilder("   Stage 1 output Qs:");
 			intermediateChannels
@@ -92,7 +92,8 @@ public class SortedFilesMergerChanneling(
 		Task.WaitAll(tasks);
 		loggerCancellationTokenSource.Cancel();
 
-		//logger.LogCompletion();
+		Console.WriteLine();
+		Console.WriteLine($"Merged in {sw.ElapsedMilliseconds/1000.0:F1} s");
 		Console.WriteLine();
 		
 		return finalMergeTask.Result;
@@ -106,7 +107,7 @@ public class SortedFilesMergerChanneling(
 		int mergerIndex)
 	{
 		var sb = new StringBuilder();
-		sb.AppendLine($"Merger {mergerIndex} merging {files.Length} files");
+		sb.AppendLine($"Stage 1 merger #{mergerIndex} is merging {files.Length} files:");
 		foreach (var file in files)
 		{
 			sb.AppendLine($"Reading {file.Name}");

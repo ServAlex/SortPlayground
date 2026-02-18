@@ -85,5 +85,6 @@ public class FileGenerator(IOptions<FileGenerationOptions> fileGenerationOptions
 		
 		loggerCancellationTokenSource.Cancel();
 		Console.WriteLine($"File generated with length {writer.BaseStream.Length / 1024 / 1024 } MB in {sw.ElapsedMilliseconds/1000} s");
+		Console.WriteLine();
 	}
 }
