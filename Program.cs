@@ -1,4 +1,5 @@
 ﻿using LargeFileSort.Configurations;
+using LargeFileSort.FileDeletion;
 using LargeFileSort.FileSorter;
 using LargeFileSort.FileGeneration;
 using LargeFileSort.FileSorter.ChunkInputFile;
@@ -45,6 +46,7 @@ builder.Services.AddTransient<FileGenerator>();
 builder.Services.AddTransient<LargeFileSorter>();
 builder.Services.AddTransient<FileChunker>();
 builder.Services.AddTransient<SortedFilesMergerChanneling>();
+builder.Services.AddTransient<LeftoversRemover>();
 builder.Services.AddTransient<FileProgressLogger>();
 
 builder.Services.AddOptions<FileGenerationOptions>()
@@ -62,7 +64,10 @@ using var host = builder.Build();
 OptionsValidator.Validate(host.Services);
 
 var generator = host.Services.GetRequiredService<FileGenerator>();
-generator.GenerateFileSingleThreadedBatched();
+generator.GenerateFile();
 
 var sorter = host.Services.GetRequiredService<LargeFileSorter>();
 await sorter.SortFile();
+
+var leftOversRemover = host.Services.GetRequiredService<LeftoversRemover>();
+leftOversRemover.Remove();
