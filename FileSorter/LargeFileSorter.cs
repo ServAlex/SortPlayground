@@ -9,10 +9,10 @@ namespace LargeFileSort.FileSorter;
 public class LargeFileSorter
 {
 	private readonly FileChunker _fileChunker;
-	private readonly SortedFilesMergerChanneling _sortedFilesMerger;
+	private readonly SortedFilesMerger _sortedFilesMerger;
 	private readonly SortOptions _sortOptions;
 	
-	public LargeFileSorter(FileChunker fileChunker, SortedFilesMergerChanneling sortedFilesMerger, IOptions<SortOptions> sortOptions)
+	public LargeFileSorter(FileChunker fileChunker, SortedFilesMerger sortedFilesMerger, IOptions<SortOptions> sortOptions)
 	{
 		_fileChunker = fileChunker;
 		_sortedFilesMerger = sortedFilesMerger;

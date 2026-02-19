@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace LargeFileSort.FileSorter.MergeChunks;
 
-public class SortedFilesMergerChanneling(
+public class SortedFilesMerger(
 	IOptions<PathOptions> pathOptions, 
 	IOptions<SortOptions> sortOptions, 
 	FileProgressLogger logger)
@@ -24,22 +24,22 @@ public class SortedFilesMergerChanneling(
 		Console.WriteLine($"SORT STEP 2: merging chunks to final file {sortedFilePath}: several Stage 1 mergers merge files to batches in parallel, feed batches to a single Stage 2 merger which writes to final file");
 		Console.WriteLine();
 		var sw = Stopwatch.StartNew();
-		
-		var files = new DirectoryInfo(chunksDirectoryPath).GetFiles();
+
+		var files = ValidatedChunkFiles(chunksDirectoryPath);
 		var chunksCount = files.Length;
-		if (chunksCount == 0)
-			throw new InvalidOperationException($"No chunk files found in '{chunksDirectoryPath}'. Nothing to merge.");
 		
-		var availableThreads = Environment.ProcessorCount;
 		var intermediateMergeThreads =
 			Math.Min(
 				(int)Math.Floor(Math.Sqrt(chunksCount)), 
-				availableThreads - 1);
-		var filesPerThread = (int)Math.Ceiling((float)chunksCount / intermediateMergeThreads);
-		//var intermediateChannelCapacity = 100;
-		var batchSize = 100_000;
+				Environment.ProcessorCount - 1);
+		if(chunksCount is 2 or 3) 
+		 	intermediateMergeThreads = 2;
+		
+		const int batchSize = 100_000;
 		const int empiricalConstant = 600;
-		var intermediateChannelCapacity = (int)Math.Min(100, (long)_sortOptions.MemoryBudgetGb*1024*1024*1024/batchSize/intermediateMergeThreads/empiricalConstant);
+		var intermediateChannelCapacity = (int)Math.Min(
+			100, 
+			(long)_sortOptions.MemoryBudgetGb*1024*1024*1024/batchSize/intermediateMergeThreads/empiricalConstant);
 		
 		var intermediateChannels = Enumerable
 			.Range(0, intermediateMergeThreads)
@@ -50,13 +50,6 @@ public class SortedFilesMergerChanneling(
 				FullMode = BoundedChannelFullMode.Wait
 			})).ToArray();
 
-		var intermediateDirectoryName = "ChunksIntermediate";
-		if (Directory.Exists(intermediateDirectoryName))
-		{
-			Directory.Delete(intermediateDirectoryName, true);
-		}
-		Directory.CreateDirectory(intermediateDirectoryName);
-		
 		var tasks = new List<Task>();
 		tasks.AddRange(
 			Enumerable
@@ -64,7 +57,7 @@ public class SortedFilesMergerChanneling(
 				.Select(q =>
 					Task.Run(() =>
 						MergeFiles(
-							files.Skip(q * filesPerThread).Take(filesPerThread).ToArray(),
+							files.Where((_, i) => i % intermediateMergeThreads == q).ToArray(),
 							intermediateChannels[q],
 							_sortOptions.BufferSizeMb * 1024 * 1024,
 							batchSize,
@@ -73,7 +66,10 @@ public class SortedFilesMergerChanneling(
 				)
 		);
 		
-		var finalMergeTask = Task.Run(() => FinalMerge(intermediateChannels, sortedFilePath, _sortOptions.BufferSizeMb * 1024 * 1024));
+		var finalMergeTask = Task.Run(() => FinalMerge(
+			intermediateChannels, 
+			sortedFilePath, 
+			_sortOptions.BufferSizeMb * 1024 * 1024));
 		tasks.Add(finalMergeTask);
 		
 		var loggerCancellationTokenSource = new CancellationTokenSource();
@@ -97,6 +93,24 @@ public class SortedFilesMergerChanneling(
 		Console.WriteLine();
 		
 		return finalMergeTask.Result;
+	}
+
+	private static FileInfo[] ValidatedChunkFiles(string chunksDirectoryPath)
+	{
+		if (!Directory.Exists(chunksDirectoryPath))
+		{
+			Console.WriteLine($"Chunks directory '{chunksDirectoryPath}' does not exist. Nothing to merge.");
+			Environment.Exit(1);
+		}
+		
+		var files = new DirectoryInfo(chunksDirectoryPath).GetFiles();
+		if (files.Length == 0)
+		{
+			Console.WriteLine($"No chunk files found in '{chunksDirectoryPath}'. Nothing to merge.");
+			Environment.Exit(1);
+		}
+
+		return files;
 	}
 
 	private void MergeFiles(

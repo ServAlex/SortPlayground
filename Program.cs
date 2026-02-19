@@ -15,7 +15,7 @@ builder.Configuration.AddCommandLine(args, OptionsHelper.GetSwitchMappings());
 builder.Services.AddTransient<FileGenerator>();
 builder.Services.AddTransient<LargeFileSorter>();
 builder.Services.AddTransient<FileChunker>();
-builder.Services.AddTransient<SortedFilesMergerChanneling>();
+builder.Services.AddTransient<SortedFilesMerger>();
 builder.Services.AddTransient<LeftoversRemover>();
 builder.Services.AddTransient<FileProgressLogger>();
 
