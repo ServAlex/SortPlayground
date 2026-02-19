@@ -8,20 +8,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-var switchMappings = new Dictionary<string, string>
-{
-	{ "--generate", $"{nameof(FileGenerationOptions)}:{nameof(FileGenerationOptions.Enabled)}" },
-	{ "--reuse", $"{nameof(FileGenerationOptions)}:{nameof(FileGenerationOptions.Reuse)}" },
-	{ "--size", $"{nameof(FileGenerationOptions)}:{nameof(FileGenerationOptions.FileSizeGb)}" },
-	
-	{ "--sort", $"{nameof(SortOptions)}:{nameof(SortOptions.Enabled)}" },
-	{ "--chunkFileSizeMb", $"{nameof(SortOptions)}:{nameof(SortOptions.IntermediateFileSizeMaxMb)}" },
-	{ "--baseChunkSizeMb", $"{nameof(SortOptions)}:{nameof(SortOptions.BaseChunkSizeMb)}" },
-	{ "--memoryBudgetGb", $"{nameof(SortOptions)}:{nameof(LargeFileSorterOptions.MemoryBudgetGb)}" },
-	
-	{ "--path", $"{nameof(PathOptions)}:{nameof(PathOptions.FilesLocation)}" },
-	{ "--delete", $"{nameof(PathOptions)}:{nameof(PathOptions.DeleteAllCreatedFiles)}" },
-};
 var builder = new HostApplicationBuilder(new HostApplicationBuilderSettings()
 {
 	DisableDefaults = true,
@@ -32,7 +18,7 @@ var builder = new HostApplicationBuilder(new HostApplicationBuilderSettings()
 //Console.WriteLine(builder.Configuration.GetDebugView());
 
 builder.Configuration.AddJsonFile("appsettings.json", optional:false, reloadOnChange:false);
-builder.Configuration.AddCommandLine(args, switchMappings);
+builder.Configuration.AddCommandLine(args, OptionsHelper.GetSwitchMappings());
 
 // builder.Configuration.AddInMemoryCollection(new List<KeyValuePair<string, string?>>
 // {
@@ -61,7 +47,7 @@ builder.Services.AddOptions<SortOptions>()
 
 using var host = builder.Build();
 
-OptionsValidator.Validate(host.Services);
+OptionsHelper.Validate(host.Services);
 
 var generator = host.Services.GetRequiredService<FileGenerator>();
 generator.GenerateFile();
