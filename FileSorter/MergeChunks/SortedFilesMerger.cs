@@ -113,7 +113,7 @@ public class SortedFilesMerger(
 		return files;
 	}
 
-	private void MergeFiles(
+	private async Task MergeFiles(
 		FileInfo[] files, 
 		Channel<MergeBatch> intermediateResultsChannel,
 		int readerBufferSize, 
@@ -162,25 +162,21 @@ public class SortedFilesMerger(
 		{
 			if (batch.Count == batchSize)
 			{
-				var sw = new SpinWait();
-				while (!intermediateResultsChannel.Writer.TryWrite(batch))
-				{
-					sw.SpinOnce();
-				}
+				await intermediateResultsChannel.Writer.WriteAsync(batch);
 				batch = new MergeBatch(ArrayPool<SimpleMergeItem>.Shared.Rent(batchSize));
 			}
 			
 			batch.Add(new SimpleMergeItem(item, mergerIndex));
 
 			var reader = readers[item.SourceIndex];
-			var next = reader.ReadLine();
+			var nextLine = reader.ReadLine();
 			
-			if (string.IsNullOrEmpty(next)) 
+			if (string.IsNullOrEmpty(nextLine)) 
 				continue;
 			
-			logger.BytesRead += next.Length + lineEndLength;
+			logger.BytesRead += nextLine.Length + lineEndLength;
 			
-			var newItem = new SimpleMergeItem(next, item.SourceIndex);
+			var newItem = new SimpleMergeItem(nextLine, item.SourceIndex);
 			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
 		}
 
@@ -196,13 +192,16 @@ public class SortedFilesMerger(
 		intermediateResultsChannel.Writer.Complete();
 	}
 
-	private long FinalMerge(Channel<MergeBatch>[] intermediateResultsChannels, string fileName, int writerBufferSize)
+	private async Task<long> FinalMerge(
+		Channel<MergeBatch>[] intermediateResultsChannels, 
+		string fileName, 
+		int writerBufferSize)
 	{
 		var sb = new StringBuilder($"Stage 2 merges {intermediateResultsChannels.Length} sources");
 		sb.AppendLine();
 		Console.WriteLine(sb);
-		
-		using var writer = new StreamWriter(
+
+		await using var writer = new StreamWriter(
 			fileName,
 			Encoding.UTF8, 
 			new FileStreamOptions
@@ -214,25 +213,16 @@ public class SortedFilesMerger(
 		
 		var priorityQueue = new PriorityQueue<SimpleMergeItem, SimpleMergeKey>();
 		var batches = new MergeBatch[intermediateResultsChannels.Length];
-		var completed = new bool[intermediateResultsChannels.Length];
 		
 		// populate queue
 		for (var i = 0; i < intermediateResultsChannels.Length; i++)
 		{
-			var spinWait = new SpinWait();
-			MergeBatch? nullableBatch;
-			while (!intermediateResultsChannels[i].Reader.TryRead(out nullableBatch))
+			if (intermediateResultsChannels[i].Reader.Completion.IsCompleted)
 			{
-				if (intermediateResultsChannels[i].Reader.Completion.IsCompleted)
-				{
-					completed[i] = true;
-					break;
-				}
-				spinWait.SpinOnce();
+				continue;
 			}
 
-			var batch = batches[i] = nullableBatch ??
-			                         throw new InvalidOperationException($"Channel {i} completed without any data.");
+			var batch = batches[i] = await intermediateResultsChannels[i].Reader.ReadAsync();
 			//var batch = batches[i] = intermediateResultsChannels[i].Reader.ReadAsync().GetAwaiter().GetResult();
 			var item = batch.Items[batch.CurrentReadIndex++];
 			priorityQueue.Enqueue(new SimpleMergeItem(item, i), new SimpleMergeKey(item));
@@ -252,28 +242,15 @@ public class SortedFilesMerger(
 			{
 				// no more items in batch, return and load next
 				ArrayPool<SimpleMergeItem>.Shared.Return(batch.Items, clearArray: false);
-				
-				// load batch or complete
-				var spinWait = new SpinWait();
-				MergeBatch? nullableBatch;
-				while (!intermediateResultsChannels[item.SourceIndex].Reader.TryRead(out nullableBatch))
-				{
-					if (intermediateResultsChannels[item.SourceIndex].Reader.Completion.IsCompleted)
-					{
-						completed[item.SourceIndex] = true;
-						break;
-					}
-					spinWait.SpinOnce();
-				}
-				
-				if (completed[item.SourceIndex])
+
+				if (intermediateResultsChannels[item.SourceIndex].Reader.Completion.IsCompleted)
 				{
 					continue;
 				}
 
-				batch = batches[item.SourceIndex] = nullableBatch ??
-				                                    throw new InvalidOperationException(
-					                                    $"Channel {item.SourceIndex} completed without any data.");
+				batch = 
+					batches[item.SourceIndex] = 
+						await intermediateResultsChannels[item.SourceIndex].Reader.ReadAsync();
 			}
 			
 			var next = batch.Items[batch.CurrentReadIndex++];
