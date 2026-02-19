@@ -31,7 +31,11 @@ builder.Services.AddOptions<SortOptions>()
 
 using var host = builder.Build();
 
-OptionsHelper.Validate(host.Services);
+if (!OptionsHelper.Validate(host.Services))
+{
+	Console.WriteLine(OptionsHelper.GetHelpText());
+	return;
+}
 
 var generator = host.Services.GetRequiredService<FileGenerator>();
 generator.GenerateFile();
