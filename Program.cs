@@ -31,17 +31,31 @@ builder.Services.AddOptions<SortOptions>()
 
 using var host = builder.Build();
 
-if (!OptionsHelper.Validate(host.Services))
+try
 {
-	Console.WriteLine(OptionsHelper.GetHelpText());
-	return;
+	OptionsHelper.ValidateConfiguration(host.Services);
+
+	host.Services.GetRequiredService<FileGenerator>().GenerateFile();
+	host.Services.GetRequiredService<LargeFileSorter>().SortFile();
+	host.Services.GetRequiredService<LeftoversRemover>().Remove();
+}
+catch (Exception e)
+{
+	switch (e)
+	{
+		case InvalidConfigurationException:
+			Console.Error.WriteLine(e.Message);
+			Console.WriteLine(OptionsHelper.GetHelpText());
+			return 1;
+
+		case FileNotFoundException:
+			Console.Error.WriteLine(e.Message);
+			return 1;
+
+		default:
+			Console.Error.WriteLine(e);
+			return 1;
+	}
 }
 
-var generator = host.Services.GetRequiredService<FileGenerator>();
-generator.GenerateFile();
-
-var sorter = host.Services.GetRequiredService<LargeFileSorter>();
-sorter.SortFile();
-
-var leftOversRemover = host.Services.GetRequiredService<LeftoversRemover>();
-leftOversRemover.Remove();
+return 0;

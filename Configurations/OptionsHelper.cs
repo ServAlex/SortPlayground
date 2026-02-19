@@ -6,7 +6,7 @@ namespace LargeFileSort.Configurations;
 
 public static class OptionsHelper
 {
-	public static bool Validate(IServiceProvider serviceProvider)
+	public static void ValidateConfiguration(IServiceProvider serviceProvider)
 	{
 		var errors = new List<string>();
 
@@ -16,20 +16,16 @@ public static class OptionsHelper
 
 		if (errors.Count != 0)
 		{
-			Console.WriteLine(string.Join(Environment.NewLine, errors));
-			Environment.Exit(1);
+			throw new InvalidConfigurationException(string.Join(Environment.NewLine, errors));
 		}
 
 		if (generationOptions is { Enabled: false } 
 		    && sortOptions is { Enabled: false } 
 		    && pathOptions is { DeleteAllCreatedFiles: false })
 		{
-			Console.WriteLine(
+			throw new InvalidConfigurationException(
 				"No action was specified. Use at least one of '--generate true', '--sort true' or '--delete true'");
-			return false;
 		}
-		
-		return true;
 	}
 
 	public static Dictionary<string, string> GetSwitchMappings()
@@ -37,7 +33,7 @@ public static class OptionsHelper
 		return  new Dictionary<string, string>
 		{
 			{ "--generate", $"{nameof(FileGenerationOptions)}:{nameof(FileGenerationOptions.Enabled)}" },
-			{ "--reuse", $"{nameof(FileGenerationOptions)}:{nameof(FileGenerationOptions.Reuse)}" },
+			{ "--reuseUnsorted", $"{nameof(FileGenerationOptions)}:{nameof(FileGenerationOptions.Reuse)}" },
 			{ "--sizeGb", $"{nameof(FileGenerationOptions)}:{nameof(FileGenerationOptions.FileSizeGb)}" },
 	
 			{ "--sort", $"{nameof(SortOptions)}:{nameof(SortOptions.Enabled)}" },

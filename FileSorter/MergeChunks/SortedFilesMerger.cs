@@ -99,15 +99,13 @@ public class SortedFilesMerger(
 	{
 		if (!Directory.Exists(chunksDirectoryPath))
 		{
-			Console.WriteLine($"Chunks directory '{chunksDirectoryPath}' does not exist. Nothing to merge.");
-			Environment.Exit(1);
+			throw new FileNotFoundException($"Chunks directory '{chunksDirectoryPath}' does not exist. Nothing to merge.");
 		}
 		
 		var files = new DirectoryInfo(chunksDirectoryPath).GetFiles();
 		if (files.Length == 0)
 		{
-			Console.WriteLine($"No chunk files found in '{chunksDirectoryPath}'. Nothing to merge.");
-			Environment.Exit(1);
+			throw new FileNotFoundException($"No chunk files found in '{chunksDirectoryPath}'. Nothing to merge.");
 		}
 
 		return files;

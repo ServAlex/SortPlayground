@@ -134,9 +134,10 @@ public class FileChunker
 		
 		if (_inputFileSize == 0)
 		{
-			Console.WriteLine($"Chunker did not find unsorted file {_unsortedFilePath} or it's empty, and it could not reuse existing chunks.");
-			Console.WriteLine($"Add '--generate true' to generate file or '--reuseChunks true' if chunks exist in {_chunkDirectoryPath}");
-			Environment.Exit(1);
+			throw new FileNotFoundException(
+				$"Chunker did not find unsorted file {_unsortedFilePath} or it's empty, and it could not reuse existing chunks."
+				+ Environment.NewLine
+				+ $"Add '--generate true' to generate file or '--reuseChunks true' if chunks exist in {_chunkDirectoryPath}");
 		}
 
 		if (Directory.Exists(_chunkDirectoryPath))
