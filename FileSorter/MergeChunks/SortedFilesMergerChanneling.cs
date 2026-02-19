@@ -21,7 +21,7 @@ public class SortedFilesMergerChanneling(
 		var sortedFilePath = Path.Combine(_pathOptions.FilesLocation, pathOptions.Value.SortedFileName);
 		
 		Console.WriteLine();
-		Console.WriteLine($"Merging to final file {sortedFilePath}: several Stage 1 mergers merge files to batches in parallel, feed batches to a single Stage 2 merger which writes to final file");
+		Console.WriteLine($"SORT STEP 2: merging chunks to final file {sortedFilePath}: several Stage 1 mergers merge files to batches in parallel, feed batches to a single Stage 2 merger which writes to final file");
 		Console.WriteLine();
 		var sw = Stopwatch.StartNew();
 		

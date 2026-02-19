@@ -75,6 +75,8 @@ public class FileChunker
 		var chunkDirectoryPath = Path.Combine(_pathOptions.FilesLocation, _pathOptions.ChunksDirectoryBaseName);
 		
 		Console.WriteLine();
+		Console.WriteLine("SORT STEP 1: splitting input file into sorted chunks");
+		Console.WriteLine();
 
 		if (!ValidateNeedToChunk(unsortedFilePath, chunkDirectoryPath))
 		{
