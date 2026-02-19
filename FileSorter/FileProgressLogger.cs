@@ -81,7 +81,7 @@ public class FileProgressLogger(IOptions<SortOptions> sortOptions)
 			//Console.SetCursorPosition(0, startLine);
 			//Thread.Sleep(200);
 		}
-		Console.WriteLine();
+		
 		Console.WriteLine();
 	}
 

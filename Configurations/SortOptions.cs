@@ -8,6 +8,9 @@ public sealed class SortOptions
 	public required bool Enabled { get; set; }
 	
 	[Required]
+	public required bool ReuseChunks { get; set; }
+	
+	[Required]
 	[Range(128, 4095)]
 	public required int IntermediateFileSizeMaxMb { get; set; }
 	

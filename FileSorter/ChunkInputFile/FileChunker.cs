@@ -24,7 +24,6 @@ public class FileChunker
 	private readonly Channel<SortedChunk> _mergeInMemoryChannel ;
 	private readonly Channel<(SortedChunk, SortedChunk?)> _mergeToFileChannel;
 
-
 	private int _fileChunkCounter; 
 	private long _inputFileSize;
 	
@@ -72,17 +71,16 @@ public class FileChunker
 	public long ChunkFileAsync()
 	{
 		var sw = Stopwatch.StartNew();
+		var unsortedFilePath = Path.Combine(_pathOptions.FilesLocation, _pathOptions.UnsortedFileName);
+		var chunkDirectoryPath = Path.Combine(_pathOptions.FilesLocation, _pathOptions.ChunksDirectoryBaseName);
+		
 		Console.WriteLine();
 
-		var chunkDirectoryPath = Path.Combine(_pathOptions.FilesLocation, _pathOptions.ChunksDirectoryBaseName);
-		if (Directory.Exists(chunkDirectoryPath))
+		if (!ValidateNeedToChunk(unsortedFilePath, chunkDirectoryPath))
 		{
-			Directory.Delete(chunkDirectoryPath, true);
+			return _inputFileSize;
 		}
-		Directory.CreateDirectory(chunkDirectoryPath);
-		
-		var unsortedFilePath = Path.Combine(_pathOptions.FilesLocation, _pathOptions.UnsortedFileName);
-		
+
 		var tasks = new List<Task>
 		{
 			// file reader task
@@ -112,8 +110,10 @@ public class FileChunker
 		
 		var loggerCancellationTokenSource = new CancellationTokenSource();
 		// ReSharper disable once MethodSupportsCancellation
-		_ = Task.Run(() => _logger.LogState(DateTime.Now, () => 
-			$"   SQ:{_sortChannel.Reader.Count}/{_queueLength}  MQ:{_mergeInMemoryChannel.Reader.Count}/{1}  MFQ:{_mergeToFileChannel.Reader.Count}/{1}", loggerCancellationTokenSource.Token));
+		_ = Task.Run(() => _logger.LogState(
+			DateTime.Now, 
+			() => $"   SQ:{_sortChannel.Reader.Count}/{_queueLength}  MQ:{_mergeInMemoryChannel.Reader.Count}/{1}  MFQ:{_mergeToFileChannel.Reader.Count}/{1}", 
+			loggerCancellationTokenSource.Token));
 
 		
 		// ReSharper disable once MethodSupportsCancellation
@@ -127,7 +127,33 @@ public class FileChunker
 		
 		return _inputFileSize;
 	}
-	
+
+	private bool ValidateNeedToChunk(string unsortedFilePath, string chunkDirectoryPath)
+	{
+		_inputFileSize = File.Exists(unsortedFilePath) ? new FileInfo(unsortedFilePath).Length : 0;
+		
+		if (Directory.Exists(chunkDirectoryPath) && _sortOptions.ReuseChunks)
+		{
+			Console.WriteLine($"Reusing chunks from {chunkDirectoryPath}");
+			Console.WriteLine();
+			return false;
+		}
+		
+		if (_inputFileSize == 0)
+		{
+			Console.WriteLine($"Chunker did not find unsorted file {unsortedFilePath} or it's empty, and it could not reuse existing chunks.");
+			Console.WriteLine($"Add '--generate true' to generate file or '--reuseChunks true' if chunks exist in {chunkDirectoryPath}");
+			Environment.Exit(1);
+		}
+
+		if (Directory.Exists(chunkDirectoryPath))
+		{
+			Directory.Delete(chunkDirectoryPath, true);
+		}
+		Directory.CreateDirectory(chunkDirectoryPath);
+		return true;
+	}
+
 	private async Task ReadInputFileAsync(string fileName, Channel<CharChunk> sortChannel)
 	{
 		_logger.LogSingleMessage($"Started reading {fileName}");
@@ -142,8 +168,6 @@ public class FileChunker
 				Options = FileOptions.SequentialScan
 			});
 		
-		_inputFileSize = reader.BaseStream.Length;
-
 		var chunk = new CharChunk(_baseChunkSize);
 		bool isReadToEnd;
 
@@ -313,13 +337,12 @@ public class FileChunker
 			{
 				// merge 2 chunks directly to the file
 				_logger.BytesWritten += chunkA.MergeToStream(chunkB, writer, 1024 * 1024);
-				_logger.LogSingleMessage($"written merged chunk to file {path}");
 			}
 			else
 			{
 				_logger.BytesWritten += chunkA.WriteChunk(writer);
-				_logger.LogSingleMessage($"written part chunk to file {path}");
 			}
+			_logger.LogSingleMessage($"written sorted chunk to file {path}");
 		}
 	}
 
