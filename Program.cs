@@ -41,7 +41,7 @@ var generator = host.Services.GetRequiredService<FileGenerator>();
 generator.GenerateFile();
 
 var sorter = host.Services.GetRequiredService<LargeFileSorter>();
-await sorter.SortFile();
+sorter.SortFile();
 
 var leftOversRemover = host.Services.GetRequiredService<LeftoversRemover>();
 leftOversRemover.Remove();

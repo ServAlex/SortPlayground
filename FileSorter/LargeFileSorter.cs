@@ -6,20 +6,14 @@ using Microsoft.Extensions.Options;
 
 namespace LargeFileSort.FileSorter;
 
-public class LargeFileSorter
+public class LargeFileSorter(
+	FileChunker fileChunker,
+	SortedFilesMerger sortedFilesMerger,
+	IOptions<SortOptions> sortOptions)
 {
-	private readonly FileChunker _fileChunker;
-	private readonly SortedFilesMerger _sortedFilesMerger;
-	private readonly SortOptions _sortOptions;
-	
-	public LargeFileSorter(FileChunker fileChunker, SortedFilesMerger sortedFilesMerger, IOptions<SortOptions> sortOptions)
-	{
-		_fileChunker = fileChunker;
-		_sortedFilesMerger = sortedFilesMerger;
-		_sortOptions = sortOptions.Value;
-	}
+	private readonly SortOptions _sortOptions = sortOptions.Value;
 
-	public async Task SortFile()
+	public void SortFile()
 	{
 		if (!_sortOptions.Enabled)
 		{
@@ -28,8 +22,8 @@ public class LargeFileSorter
 		}
 		
 		var sw = Stopwatch.StartNew();
-		var inputFileSize = _fileChunker.ChunkFileAsync();
-		var outputFileSizeChanneling = _sortedFilesMerger.MergeSortedFiles();
+		var inputFileSize = fileChunker.SplitFileIntoSortedChunkFiles();
+		var outputFileSizeChanneling = sortedFilesMerger.MergeSortedFiles();
 		
 		Console.WriteLine($"Full sort took: {sw.ElapsedMilliseconds/1000.0:F1} s");
 		Console.WriteLine($"Unsorted file size: {inputFileSize} B");
