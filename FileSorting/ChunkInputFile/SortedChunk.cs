@@ -1,3 +1,5 @@
+using LargeFileSort.Logging;
+
 namespace LargeFileSort.FileSorting.ChunkInputFile;
 
 public class SortedChunk
@@ -57,7 +59,7 @@ public class SortedChunk
 		}
 	}
 
-	public long MergeToStream(SortedChunk secondChunk, StreamWriter stream)
+	public void MergeToStream(SortedChunk secondChunk, StreamWriter writer, LiveProgressLogger logger)
 	{
 		var chunkA = this;
 		var chunkB = secondChunk;
@@ -65,6 +67,8 @@ public class SortedChunk
 		var i = 0;
 		var j = 0;
 
+		var initialBytesWritten = logger.BytesWritten;
+		
 		while (i < chunkA._linesCount && j < chunkB._linesCount)
 		{
 			ref readonly var a = ref chunkA._lines[i];
@@ -74,7 +78,7 @@ public class SortedChunk
 			{
 				i++;
 				if(a.LineLength > 0)
-					stream.WriteLine(chunkA._subChunks[a.SubChunkIndex].Span.Slice(a.LineOffset, a.LineLength));
+					writer.WriteLine(chunkA._subChunks[a.SubChunkIndex].Span.Slice(a.LineOffset, a.LineLength));
 				
 				/*
 				todo: write to buffer and flush it
@@ -84,25 +88,33 @@ public class SortedChunk
 			{
 				j++;
 				if(b.LineLength > 0)
-					stream.WriteLine(chunkB._subChunks[b.SubChunkIndex].Span.Slice(b.LineOffset, b.LineLength));
+					writer.WriteLine(chunkB._subChunks[b.SubChunkIndex].Span.Slice(b.LineOffset, b.LineLength));
+			}
+
+			if ((i + j) % 500_000 == 0)
+			{
+				logger.BytesWritten = initialBytesWritten + writer.BaseStream.Position;
 			}
 		}
 
-		chunkA.WriteChunk(stream, i);
-		chunkB.WriteChunk(stream, j);
-		
-		return stream.BaseStream.Position;
+		chunkA.WriteChunk(writer, logger, i);
+		chunkB.WriteChunk(writer, logger, j);
 	}
 
-	public long WriteChunk(StreamWriter writer, int startIndex = 0)
+	public void WriteChunk(StreamWriter writer, LiveProgressLogger logger, int startIndex = 0)
 	{
+		var initialBytesWritten = logger.BytesWritten;
 		for (var i = startIndex; i < _linesCount; i++)
 		{
 			ref readonly var line = ref _lines[i];
 			if(line.LineLength > 0)
 				writer.WriteLine(_subChunks[line.SubChunkIndex].Span.Slice(line.LineOffset, line.LineLength));
+
+			if (i % 500_000 == 0)
+			{
+				logger.BytesWritten = initialBytesWritten + writer.BaseStream.Position;
+			}
 		}
-		return writer.BaseStream.Position;
 	}
 
 	private static int Compare(Line a, Line b, UnsortedChunk[] chunkArrayA, UnsortedChunk[] chunkArrayB)

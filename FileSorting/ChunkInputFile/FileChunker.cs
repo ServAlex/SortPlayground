@@ -327,11 +327,11 @@ public class FileChunker
 			if (chunkB is not null)
 			{
 				// merge 2 chunks directly to the file
-				_logger.BytesWritten += chunkA.MergeToStream(chunkB, writer);
+				chunkA.MergeToStream(chunkB, writer, _logger);
 			}
 			else
 			{
-				_logger.BytesWritten += chunkA.WriteChunk(writer);
+				chunkA.WriteChunk(writer, _logger);
 			}
 			_logger.LogSingleMessage($"written sorted chunk to file {path}");
 		}
