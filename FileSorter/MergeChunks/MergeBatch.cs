@@ -1,17 +1,12 @@
 namespace LargeFileSort.FileSorter.MergeChunks;
 
-sealed class MergeBatch
+internal sealed class MergeBatch(MergeItem[] items)
 {
-	public SimpleMergeItem[] Items;
+	public readonly MergeItem[] Items = items;
 	public int Count;
 	public int CurrentReadIndex;
 
-	public MergeBatch(SimpleMergeItem[] items)
-	{
-		Items = items;
-	}
-	
-	public void Add(SimpleMergeItem item)
+	public void Add(MergeItem item)
 	{
 		Items[Count++] = item;
 	}

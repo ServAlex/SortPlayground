@@ -138,7 +138,7 @@ public class SortedFilesMerger(
 				})
 		).ToArray();
 		
-		var pq = new PriorityQueue<SimpleMergeItem, SimpleMergeKey>();
+		var pq = new PriorityQueue<MergeItem, MergeKey>();
 		var lineEndLength = Environment.NewLine.Length;
 		
 		// populate queue
@@ -149,11 +149,11 @@ public class SortedFilesMerger(
 				continue;
 			logger.BytesRead += line.Length + lineEndLength;
 			
-			var newItem = new SimpleMergeItem(line, i);
-			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
+			var newItem = new MergeItem(line, i);
+			pq.Enqueue(newItem, new MergeKey(newItem));
 		}
 		
-		var batch = new MergeBatch(ArrayPool<SimpleMergeItem>.Shared.Rent(batchSize));
+		var batch = new MergeBatch(ArrayPool<MergeItem>.Shared.Rent(batchSize));
 		
 		// run until the queue is empty
 		while (pq.TryDequeue(out var item, out _))
@@ -161,10 +161,10 @@ public class SortedFilesMerger(
 			if (batch.Count == batchSize)
 			{
 				await intermediateResultsChannel.Writer.WriteAsync(batch);
-				batch = new MergeBatch(ArrayPool<SimpleMergeItem>.Shared.Rent(batchSize));
+				batch = new MergeBatch(ArrayPool<MergeItem>.Shared.Rent(batchSize));
 			}
 			
-			batch.Add(new SimpleMergeItem(item, mergerIndex));
+			batch.Add(new MergeItem(item, mergerIndex));
 
 			var reader = readers[item.SourceIndex];
 			var nextLine = reader.ReadLine();
@@ -174,8 +174,8 @@ public class SortedFilesMerger(
 			
 			logger.BytesRead += nextLine.Length + lineEndLength;
 			
-			var newItem = new SimpleMergeItem(nextLine, item.SourceIndex);
-			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
+			var newItem = new MergeItem(nextLine, item.SourceIndex);
+			pq.Enqueue(newItem, new MergeKey(newItem));
 		}
 
 		if (batch.Count > 0)
@@ -209,7 +209,7 @@ public class SortedFilesMerger(
 				Access = FileAccess.Write,
 			});	
 		
-		var priorityQueue = new PriorityQueue<SimpleMergeItem, SimpleMergeKey>();
+		var priorityQueue = new PriorityQueue<MergeItem, MergeKey>();
 		var batches = new MergeBatch[intermediateResultsChannels.Length];
 		
 		// populate queue
@@ -223,7 +223,7 @@ public class SortedFilesMerger(
 			var batch = batches[i] = await intermediateResultsChannels[i].Reader.ReadAsync();
 			//var batch = batches[i] = intermediateResultsChannels[i].Reader.ReadAsync().GetAwaiter().GetResult();
 			var item = batch.Items[batch.CurrentReadIndex++];
-			priorityQueue.Enqueue(new SimpleMergeItem(item, i), new SimpleMergeKey(item));
+			priorityQueue.Enqueue(new MergeItem(item, i), new MergeKey(item));
 		}
 		
 		// run until the queue is empty
@@ -239,7 +239,7 @@ public class SortedFilesMerger(
 			if (batch.CurrentReadIndex == batch.Count)
 			{
 				// no more items in batch, return and load next
-				ArrayPool<SimpleMergeItem>.Shared.Return(batch.Items, clearArray: false);
+				ArrayPool<MergeItem>.Shared.Return(batch.Items, clearArray: false);
 
 				if (intermediateResultsChannels[item.SourceIndex].Reader.Completion.IsCompleted)
 				{
@@ -252,7 +252,7 @@ public class SortedFilesMerger(
 			}
 			
 			var next = batch.Items[batch.CurrentReadIndex++];
-			priorityQueue.Enqueue(new SimpleMergeItem(next, item.SourceIndex), new SimpleMergeKey(next));
+			priorityQueue.Enqueue(new MergeItem(next, item.SourceIndex), new MergeKey(next));
 		}
 		
 		foreach (var b in batches)

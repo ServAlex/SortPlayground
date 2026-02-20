@@ -26,7 +26,7 @@ public class FileChunker
 	private int _fileChunkCounter; 
 	private readonly Lock _fileCounterLock = new();
 
-	private readonly Channel<CharChunk> _sortChannel;
+	private readonly Channel<UnsortedChunk> _sortChannel;
 	private readonly Channel<SortedChunk> _mergeInMemoryChannel;
 	private readonly Channel<(SortedChunk, SortedChunk?)> _mergeToFileChannel;
 
@@ -54,7 +54,7 @@ public class FileChunker
 		_unsortedFilePath = Path.Combine(pathOptionsValue.FilesLocation, pathOptionsValue.UnsortedFileName);
 		_chunkDirectoryPath = Path.Combine(pathOptionsValue.FilesLocation, pathOptionsValue.ChunksDirectoryBaseName);
 		
-		_sortChannel = Channel.CreateBounded<CharChunk>(
+		_sortChannel = Channel.CreateBounded<UnsortedChunk>(
 			new BoundedChannelOptions(_queueLength)
 			{
 				SingleWriter = true,
@@ -162,7 +162,7 @@ public class FileChunker
 				Options = FileOptions.SequentialScan
 			});
 		
-		var chunk = new CharChunk(_baseChunkSize);
+		var chunk = new UnsortedChunk(_baseChunkSize);
 		bool isReadToEnd;
 
 		do
@@ -186,7 +186,7 @@ public class FileChunker
 			}
 				
 			// init a new chunk with the end of the previous one and set offset
-			var newChunk = new CharChunk(_baseChunkSize);
+			var newChunk = new UnsortedChunk(_baseChunkSize);
 			if (chunk.FilledLength < _baseChunkSize)
 			{
 				newChunk.StartOffset = _baseChunkSize - chunk.FilledLength;
