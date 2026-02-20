@@ -5,7 +5,7 @@ using System.Threading.Channels;
 using LargeFileSort.Configurations;
 using Microsoft.Extensions.Options;
 
-namespace LargeFileSort.FileSorter.MergeChunks;
+namespace LargeFileSort.FileSorting.MergeChunks;
 
 public class SortedFilesMerger(
 	IOptions<PathOptions> pathOptions, 

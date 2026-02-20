@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using LargeFileSort.Configurations;
-using LargeFileSort.FileSorter;
+using LargeFileSort.FileSorting;
 using Microsoft.Extensions.Options;
 
 namespace LargeFileSort.FileGeneration;

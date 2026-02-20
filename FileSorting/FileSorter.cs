@@ -1,12 +1,12 @@
 using System.Diagnostics;
 using LargeFileSort.Configurations;
-using LargeFileSort.FileSorter.ChunkInputFile;
-using LargeFileSort.FileSorter.MergeChunks;
+using LargeFileSort.FileSorting.ChunkInputFile;
+using LargeFileSort.FileSorting.MergeChunks;
 using Microsoft.Extensions.Options;
 
-namespace LargeFileSort.FileSorter;
+namespace LargeFileSort.FileSorting;
 
-public class LargeFileSorter(
+public class FileSorter(
 	FileChunker fileChunker,
 	SortedFilesMerger sortedFilesMerger,
 	IOptions<SortOptions> sortOptions)

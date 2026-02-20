@@ -1,9 +1,9 @@
 ﻿using LargeFileSort.Configurations;
 using LargeFileSort.FileDeletion;
-using LargeFileSort.FileSorter;
 using LargeFileSort.FileGeneration;
-using LargeFileSort.FileSorter.ChunkInputFile;
-using LargeFileSort.FileSorter.MergeChunks;
+using LargeFileSort.FileSorting;
+using LargeFileSort.FileSorting.ChunkInputFile;
+using LargeFileSort.FileSorting.MergeChunks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -13,7 +13,7 @@ builder.Configuration.AddCommandLine(args, OptionsHelper.GetSwitchMappings());
 //Console.WriteLine(builder.Configuration.GetDebugView());
 
 builder.Services.AddTransient<FileGenerator>();
-builder.Services.AddTransient<LargeFileSorter>();
+builder.Services.AddTransient<FileSorter>();
 builder.Services.AddTransient<FileChunker>();
 builder.Services.AddTransient<SortedFilesMerger>();
 builder.Services.AddTransient<LeftoversRemover>();
@@ -36,7 +36,7 @@ try
 	OptionsHelper.ValidateConfiguration(host.Services);
 
 	host.Services.GetRequiredService<FileGenerator>().GenerateFile();
-	host.Services.GetRequiredService<LargeFileSorter>().SortFile();
+	host.Services.GetRequiredService<FileSorter>().SortFile();
 	host.Services.GetRequiredService<LeftoversRemover>().Remove();
 }
 catch (Exception e)

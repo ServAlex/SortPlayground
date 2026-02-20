@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace LargeFileSort.FileSorter.MergeChunks;
+namespace LargeFileSort.FileSorting.MergeChunks;
 
 public class SortedFilesMergerIntermediateFiles
 {

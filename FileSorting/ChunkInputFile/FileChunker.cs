@@ -4,7 +4,7 @@ using System.Threading.Channels;
 using LargeFileSort.Configurations;
 using Microsoft.Extensions.Options;
 
-namespace LargeFileSort.FileSorter.ChunkInputFile;
+namespace LargeFileSort.FileSorting.ChunkInputFile;
 
 public class FileChunker
 {

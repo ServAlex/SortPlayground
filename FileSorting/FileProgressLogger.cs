@@ -3,7 +3,7 @@ using System.Text;
 using LargeFileSort.Configurations;
 using Microsoft.Extensions.Options;
 
-namespace LargeFileSort.FileSorter;
+namespace LargeFileSort.FileSorting;
 
 public class FileProgressLogger(IOptions<SortOptions> sortOptions)
 {

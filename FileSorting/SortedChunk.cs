@@ -1,4 +1,4 @@
-namespace LargeFileSort.FileSorter;
+namespace LargeFileSort.FileSorting;
 
 public class SortedChunk
 {

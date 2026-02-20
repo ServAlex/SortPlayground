@@ -1,4 +1,4 @@
-namespace LargeFileSort.FileSorter.MergeChunks;
+namespace LargeFileSort.FileSorting.MergeChunks;
 
 internal readonly struct MergeKey : IComparable<MergeKey>
 {
