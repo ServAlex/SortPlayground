@@ -63,7 +63,7 @@ public static class OptionsHelper
 		sb.AppendLine("  --sizeGb              - int,	size of the file to be generated, default: 10");
 		sb.AppendLine("");
 		sb.AppendLine("  --sort                - bool,	sort unsorted file, default: false");
-		sb.AppendLine("  --reuseChunks         - bool,	reuse partially sorted chuns if exist, default: false");
+		sb.AppendLine("  --reuseChunks         - bool,	reuse partially sorted chunks if exist, default: false");
 		sb.AppendLine("  --chunkFileSizeMb     - int,	default: 1024");
 		sb.AppendLine("  --baseChunkSizeMb     - int,	size of chunk sorted directly, default: 63");
 		sb.AppendLine("");
