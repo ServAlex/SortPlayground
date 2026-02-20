@@ -19,7 +19,7 @@ public sealed class GeneralOptions
 	public required string ChunksDirectoryBaseName { get; set; }
 	
 	[Required]
-	[Range(8, 128)]
+	[Range(2, 128)]
 	public required int MemoryBudgetGb { get; set; }
 	
 	[Required]

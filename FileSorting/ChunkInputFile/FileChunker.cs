@@ -9,16 +9,14 @@ namespace LargeFileSort.FileSorting.ChunkInputFile;
 
 public class FileChunker
 {
-	private readonly int _bufferSize;
-	private readonly int _memoryBudgetMb;
 	private readonly int _sortWorkerCount;
-	private readonly int _mergeWorkerCount;
-	private readonly int _queueLength;
 	private readonly int _baseChunkSize;
 	
+	private readonly int _memoryBudgetGb;
 	private readonly string _unsortedFilePath;
 	private readonly string _chunkDirectoryPath;
 	
+	private long _inputFileSize;
 	private readonly int _maxRank;
 	
 	private readonly SortedChunk?[] _sortedChunks;
@@ -30,33 +28,35 @@ public class FileChunker
 	private readonly Channel<UnsortedChunk> _sortChannel;
 	private readonly Channel<SortedChunk> _mergeInMemoryChannel;
 	private readonly Channel<(SortedChunk, SortedChunk?)> _mergeToFileChannel;
-
-	private long _inputFileSize;
 	
 	private readonly SortOptions _sortOptions;
 	private readonly LiveProgressLogger _logger;
 
-	public FileChunker(IOptions<SortOptions> sortOptions, IOptions<GeneralOptions> generalOptions, LiveProgressLogger logger)
+	public FileChunker(
+		IOptions<SortOptions> sortOptions, 
+		IOptions<GeneralOptions> generalOptions, 
+		LiveProgressLogger logger)
 	{
 		_sortOptions = sortOptions.Value;
 		_logger = logger;
-		_bufferSize = _sortOptions.BufferSizeMb * 1024 * 1024;
-		_mergeWorkerCount = _sortOptions.MergeWorkerCount;
-		//_sortWorkerCount = _sortOptions.SortWorkerCount;
-		_sortWorkerCount = Environment.ProcessorCount - 2 - _mergeWorkerCount;
-		_queueLength = _sortOptions.QueueLength;
+		_sortWorkerCount = Environment.ProcessorCount 
+		                   - _sortOptions.MergeToFileWorkerCount 
+		                   - _sortOptions.MergeWorkerCount 
+		                   - 1;
 		_baseChunkSize = _sortOptions.BaseChunkSizeMb * 1024 * 1024;
 		
 		_maxRank = MaxRank((int)(_sortOptions.IntermediateFileSizeMaxMb/2.0 * 1024 * 1024), _baseChunkSize);
 		_sortedChunks = new SortedChunk?[_maxRank + 1];
 		
 		var generalOptionsValue = generalOptions.Value;
-		_memoryBudgetMb = generalOptionsValue.MemoryBudgetGb * 1024;
+		_memoryBudgetGb = generalOptionsValue.MemoryBudgetGb;
 		_unsortedFilePath = Path.Combine(generalOptionsValue.FilesLocation, generalOptionsValue.UnsortedFileName);
-		_chunkDirectoryPath = Path.Combine(generalOptionsValue.FilesLocation, generalOptionsValue.ChunksDirectoryBaseName);
+		_chunkDirectoryPath = Path.Combine(
+			generalOptionsValue.FilesLocation, 
+			generalOptionsValue.ChunksDirectoryBaseName);
 		
 		_sortChannel = Channel.CreateBounded<UnsortedChunk>(
-			new BoundedChannelOptions(_queueLength)
+			new BoundedChannelOptions(_sortOptions.QueueLength)
 			{
 				SingleWriter = true,
 				FullMode = BoundedChannelFullMode.Wait
@@ -90,24 +90,24 @@ public class FileChunker
 		var tasks = new List<Task>
 		{
 			Task.Run(ReadInputFileAsync),
-			
+
 			// _sortWorkerCount chunk sorters
 			Task.WhenAll(Enumerable.Range(0, _sortWorkerCount).Select(_ => Task.Run(SortChunkAsync)))
 				.ContinueWith(_ => _mergeInMemoryChannel.Writer.Complete()),
-			
+
 			// _mergeWorkerCount merge workers, continues with flushing queue
-			Task.WhenAll(Enumerable.Range(0, _mergeWorkerCount).Select(_ => Task.Run(MergeInMemoryAsync)))
+			Task.WhenAll(Enumerable.Range(0, _sortOptions.MergeWorkerCount).Select(_ => Task.Run(MergeInMemoryAsync)))
 				.ContinueWith(_ => FlushMergeQueue()),
-			
-			// merge to file worker
-			Task.Run(MergeToFileAsync)
+
+			// merge to file worker(s)
+			Task.WhenAll(Enumerable .Range(0, _sortOptions.MergeToFileWorkerCount) .Select(_ => Task.Run(MergeToFileAsync))),
 		};
 		
 		var loggerCancellationTokenSource = new CancellationTokenSource();
 		// ReSharper disable once MethodSupportsCancellation
 		_ = Task.Run(() => _logger.LogState(
 			DateTime.Now, 
-			() => $"   SQ:{_sortChannel.Reader.Count}/{_queueLength}  MQ:{_mergeInMemoryChannel.Reader.Count}/{1}  MFQ:{_mergeToFileChannel.Reader.Count}/{1}", 
+			() => $"   Sort queue:{_sortChannel.Reader.Count}/{_sortOptions.QueueLength}  Merge queue:{_mergeInMemoryChannel.Reader.Count}/{1}  Merge to file queue:{_mergeToFileChannel.Reader.Count}/{1}", 
 			loggerCancellationTokenSource.Token));
 
 		// ReSharper disable once MethodSupportsCancellation
@@ -159,7 +159,7 @@ public class FileChunker
 			true,
 			new FileStreamOptions
 			{
-				BufferSize = _bufferSize,
+				BufferSize = _sortOptions.BufferSizeMb * 1024 * 1024,
 				Options = FileOptions.SequentialScan
 			});
 		
@@ -195,12 +195,12 @@ public class FileChunker
 			}
 			chunk = newChunk;
 
-			var usedMemoryKb = GC.GetTotalMemory(true) / 1024;
-			while ((float)usedMemoryKb/1024 > _memoryBudgetMb*0.85)
+			var usedMemory = GC.GetTotalMemory(true);
+			while ((float)usedMemory / 1024 / 1024 / 1024 > _memoryBudgetGb * 0.85)
 			{
 				_logger.LogSingleMessage($"approaching memory budget, holding new chunk for 1 sec");
 				await Task.Delay(1000);
-				usedMemoryKb = GC.GetTotalMemory(true) / 1024;
+				usedMemory = GC.GetTotalMemory(true);
 			}
 
 		} while (!isReadToEnd);
@@ -226,7 +226,6 @@ public class FileChunker
 			// sort
 			var comparer = new LineComparer(chunk.Buffer);
 			Array.Sort(records, 0, count, comparer);
-			//_logger.LogSingleMessage($"sorted chunk with {count} lines {chunk.FilledLength} chars in {sw.ElapsedMilliseconds} ms");
 			
 			var sortedChunk = new SortedChunk(records, chunk, _maxRank, count);
 			await _mergeInMemoryChannel.Writer.WriteAsync(sortedChunk);
@@ -247,7 +246,6 @@ public class FileChunker
 					if (secondChunk is null)
 					{
 						_sortedChunks[chunk.ChunkRank] = chunk;
-						//_logger.LogSingleMessage($"stored chunk of rank {chunk.ChunkRank}     {string.Join(", ", _sortedChunks.Select(c => c is null ? "0" : "1"))}");
 						break;
 					}
 
@@ -319,7 +317,7 @@ public class FileChunker
 				Encoding.UTF8, 
 				new FileStreamOptions
 				{
-					BufferSize = 1 << 22, 
+					BufferSize = _sortOptions.BufferSizeMb * 1024 * 1024,
 					Mode = FileMode.Create, 
 					Access = FileAccess.Write
 				});

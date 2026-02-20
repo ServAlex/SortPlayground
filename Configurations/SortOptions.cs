@@ -27,6 +27,10 @@ public sealed class SortOptions
 	public required int MergeWorkerCount { get; set; }
 	
 	[Required]
+	[Range(1, 10)]
+	public required int MergeToFileWorkerCount { get; set; }
+	
+	[Required]
 	[Range(1, 20)]
 	public required int SortWorkerCount { get; set; }
 	
