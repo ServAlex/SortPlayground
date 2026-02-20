@@ -11,7 +11,7 @@ Run and delete all the created files afterward:
 
 Delete files created by the previous run:
 
-`dotnet run -c Release --delete --path ../SortTemp`
+`dotnet run -c Release --delete true --path ../SortTemp`
 
 ---
 
