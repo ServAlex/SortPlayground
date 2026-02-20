@@ -327,7 +327,7 @@ public class FileChunker
 			if (chunkB is not null)
 			{
 				// merge 2 chunks directly to the file
-				_logger.BytesWritten += chunkA.MergeToStream(chunkB, writer, 1024 * 1024);
+				_logger.BytesWritten += chunkA.MergeToStream(chunkB, writer);
 			}
 			else
 			{

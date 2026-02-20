@@ -57,7 +57,7 @@ public class SortedChunk
 		}
 	}
 
-	public long MergeToStream(SortedChunk secondChunk, StreamWriter stream, int bufferSize)
+	public long MergeToStream(SortedChunk secondChunk, StreamWriter stream)
 	{
 		var chunkA = this;
 		var chunkB = secondChunk;
