@@ -20,6 +20,24 @@
       <None Update="appsettings.json">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Remove="Junk\**" />
+      <None Remove="Chunks100\**" />
+      <None Remove="Chunks10\**" />
+      <None Remove="test10.txt" />
+      <None Remove="test20.txt" />
+      <None Remove="test100.txt" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="Junk\**" />
+      <Compile Remove="Chunks100\**" />
+      <Compile Remove="Chunks10\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Remove="Junk\**" />
+      <EmbeddedResource Remove="Chunks100\**" />
+      <EmbeddedResource Remove="Chunks10\**" />
     </ItemGroup>
 
 </Project>

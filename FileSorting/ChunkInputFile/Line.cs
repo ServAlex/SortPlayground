@@ -1,4 +1,4 @@
-namespace LargeFileSort.FileSorter;
+namespace LargeFileSort.FileSorting.ChunkInputFile;
 
 /// <summary>
 /// represents a single line in a char[] buffer
@@ -67,10 +67,11 @@ public struct Line
 			r.LineLength = (short)lineLength;
 			r.StringLength = (short)textLength;
 			r.SubChunkIndex = 0;
-			r.Prefix = Line.EncodeAscii8(data.Slice(textStart, textLength));
+			r.Prefix = EncodeAscii8(data.Slice(textStart, textLength));
 
 			i++; // '\n'
 		}
+		// todo: skip empty lines
 
 		return count;
 	}	

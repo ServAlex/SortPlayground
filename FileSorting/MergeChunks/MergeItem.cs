@@ -1,6 +1,6 @@
-namespace LargeFileSort.FileSorter.MergeChunks;
+namespace LargeFileSort.FileSorting.MergeChunks;
 
-public readonly struct SimpleMergeItem
+internal readonly struct MergeItem
 {
 	public readonly string Line;
 	public readonly int TextOffset;
@@ -8,7 +8,7 @@ public readonly struct SimpleMergeItem
 	public readonly int Number;
 	public readonly int SourceIndex;
 
-	public SimpleMergeItem(string line, int fileIndex)
+	public MergeItem(string line, int fileIndex)
 	{
 		Line = line;
 		SourceIndex = fileIndex;
@@ -23,7 +23,7 @@ public readonly struct SimpleMergeItem
 		TextLength = line.Length - (i + 1);	
 	}
 
-	public SimpleMergeItem(SimpleMergeItem oldItem, int fileIndex)
+	public MergeItem(MergeItem oldItem, int fileIndex)
 	{
 		Line = oldItem.Line;
 		SourceIndex = fileIndex;

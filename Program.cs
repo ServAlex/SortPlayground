@@ -1,9 +1,10 @@
 ﻿using LargeFileSort.Configurations;
 using LargeFileSort.FileDeletion;
-using LargeFileSort.FileSorter;
 using LargeFileSort.FileGeneration;
-using LargeFileSort.FileSorter.ChunkInputFile;
-using LargeFileSort.FileSorter.MergeChunks;
+using LargeFileSort.FileSorting;
+using LargeFileSort.FileSorting.ChunkInputFile;
+using LargeFileSort.FileSorting.MergeChunks;
+using LargeFileSort.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -13,17 +14,17 @@ builder.Configuration.AddCommandLine(args, OptionsHelper.GetSwitchMappings());
 //Console.WriteLine(builder.Configuration.GetDebugView());
 
 builder.Services.AddTransient<FileGenerator>();
-builder.Services.AddTransient<LargeFileSorter>();
+builder.Services.AddTransient<FileSorter>();
 builder.Services.AddTransient<FileChunker>();
 builder.Services.AddTransient<SortedFilesMerger>();
 builder.Services.AddTransient<LeftoversRemover>();
-builder.Services.AddTransient<FileProgressLogger>();
+builder.Services.AddTransient<LiveProgressLogger>();
 
 builder.Services.AddOptions<FileGenerationOptions>()
 	.Bind(builder.Configuration.GetSection(nameof(FileGenerationOptions)))
 	.ValidateDataAnnotations();
-builder.Services.AddOptions<PathOptions>()
-	.Bind(builder.Configuration.GetSection(nameof(PathOptions)))
+builder.Services.AddOptions<GeneralOptions>()
+	.Bind(builder.Configuration.GetSection(nameof(GeneralOptions)))
 	.ValidateDataAnnotations();
 builder.Services.AddOptions<SortOptions>()
 	.Bind(builder.Configuration.GetSection(nameof(SortOptions)))
@@ -31,17 +32,31 @@ builder.Services.AddOptions<SortOptions>()
 
 using var host = builder.Build();
 
-if (!OptionsHelper.Validate(host.Services))
+try
 {
-	Console.WriteLine(OptionsHelper.GetHelpText());
-	return;
+	OptionsHelper.ValidateConfiguration(host.Services);
+
+	host.Services.GetRequiredService<FileGenerator>().GenerateFile();
+	host.Services.GetRequiredService<FileSorter>().SortFile();
+	host.Services.GetRequiredService<LeftoversRemover>().Remove();
+}
+catch (Exception e)
+{
+	switch (e)
+	{
+		case InvalidConfigurationException:
+			Console.Error.WriteLine(e.Message);
+			Console.WriteLine(OptionsHelper.GetHelpText());
+			return 1;
+
+		case FileNotFoundException:
+			Console.Error.WriteLine(e.Message);
+			return 1;
+
+		default:
+			Console.Error.WriteLine(e);
+			return 1;
+	}
 }
 
-var generator = host.Services.GetRequiredService<FileGenerator>();
-generator.GenerateFile();
-
-var sorter = host.Services.GetRequiredService<LargeFileSorter>();
-await sorter.SortFile();
-
-var leftOversRemover = host.Services.GetRequiredService<LeftoversRemover>();
-leftOversRemover.Remove();
+return 0;

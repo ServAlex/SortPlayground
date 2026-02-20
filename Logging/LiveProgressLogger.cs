@@ -3,9 +3,15 @@ using System.Text;
 using LargeFileSort.Configurations;
 using Microsoft.Extensions.Options;
 
-namespace LargeFileSort.FileSorter;
+namespace LargeFileSort.Logging;
 
-public class FileProgressLogger(IOptions<SortOptions> sortOptions)
+/// <summary>
+/// logger for live values
+/// LogState will run continuously until canceled with CancellationTokenSource
+/// LogSingleMessage will print one permanent line above the live dashboard
+/// </summary>
+/// <param name="generalOptions"></param>
+public class LiveProgressLogger(IOptions<GeneralOptions> generalOptions)
 {
 	public long LinesWritten { get; set;}
 	public long BytesWritten { get; set;}
@@ -14,8 +20,8 @@ public class FileProgressLogger(IOptions<SortOptions> sortOptions)
 	
 	private DateTime StartTime { get; set;}
 	
-	private StringBuilder _sb = new();
-	private readonly SortOptions _sortOptions = sortOptions.Value;
+	private readonly StringBuilder _sb = new();
+	private readonly GeneralOptions _generalOptions = generalOptions.Value;
 
 	public void LogState(DateTime startTime, Func<string>? getCustomLine, CancellationToken cancellationToken)
 	{
@@ -72,7 +78,7 @@ public class FileProgressLogger(IOptions<SortOptions> sortOptions)
 			var gcInfo = GC.GetGCMemoryInfo();
 			var memoryLoad = gcInfo.MemoryLoadBytes / 1024d / 1024 / 1024;
 			var totalSystemMemoryGb = gcInfo.TotalAvailableMemoryBytes / 1024d / 1024 / 1024;
-			sb.Append($"   RAM budget:{workingSetGb,5:F1} / {_sortOptions.MemoryBudgetGb:F1} GB");
+			sb.Append($"   RAM budget:{workingSetGb,5:F1} / {_generalOptions.MemoryBudgetGb:F1} GB");
 			sb.Append($"    System memory load: {memoryLoad,5:F1} GB");
 			sb.Append($"    Total RAM: {totalSystemMemoryGb,5:F1} GB");
 			sb.Append($"    Pause: {gcInfo.PauseTimePercentage,5:F1}%");
@@ -90,7 +96,7 @@ public class FileProgressLogger(IOptions<SortOptions> sortOptions)
 		_sb.AppendLine(message);
 	}
 
-	public FileProgressLogger Reset()
+	public LiveProgressLogger Reset()
 	{
 		StartTime = DateTime.Now;
 		_sb.Clear();

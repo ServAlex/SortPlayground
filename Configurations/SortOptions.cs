@@ -19,10 +19,6 @@ public sealed class SortOptions
 	public required int BaseChunkSizeMb { get; set; }
 	
 	[Required]
-	[Range(8, 128)]
-	public required int MemoryBudgetGb { get; set; }
-	
-	[Required]
 	[Range(1, 10)]
 	public required int QueueLength { get; set; }
 	

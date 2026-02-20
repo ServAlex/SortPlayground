@@ -1,6 +1,6 @@
-namespace LargeFileSort.FileSorter;
+namespace LargeFileSort.FileSorting.ChunkInputFile;
 
-public sealed class CharChunk
+public sealed class UnsortedChunk
 {
 	public char[] Buffer { get; }
 	public int StartOffset { get; set; }
@@ -8,7 +8,7 @@ public sealed class CharChunk
 
 	private readonly int _length;
 
-	public CharChunk(int length)
+	public UnsortedChunk(int length)
 	{
 		_length = length;
 		Buffer = new char[_length];

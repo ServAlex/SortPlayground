@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using LargeFileSort.Configurations;
-using LargeFileSort.FileSorter;
+using LargeFileSort.Logging;
 using Microsoft.Extensions.Options;
 
 namespace LargeFileSort.FileGeneration;
@@ -9,14 +9,14 @@ namespace LargeFileSort.FileGeneration;
 public class FileGenerator
 {
 	private readonly FileGenerationOptions _fileGenerationOptions;
-	private readonly PathOptions _pathOptions;
-	private readonly FileProgressLogger _logger;
+	private readonly GeneralOptions _generalOptions;
+	private readonly LiveProgressLogger _logger;
 
-	public FileGenerator(IOptions<FileGenerationOptions> fileGenerationOptions, IOptions<PathOptions> pathOptions, FileProgressLogger logger)
+	public FileGenerator(IOptions<FileGenerationOptions> fileGenerationOptions, IOptions<GeneralOptions> pathOptions, LiveProgressLogger logger)
 	{
 		_logger = logger;
 		_fileGenerationOptions = fileGenerationOptions.Value;
-		_pathOptions = pathOptions.Value;
+		_generalOptions = pathOptions.Value;
 	}
 
 	private const int StringPartMaxLength = 100;
@@ -52,19 +52,19 @@ public class FileGenerator
 			return;
 		}
 		
-		if (!Directory.Exists(_pathOptions.FilesLocation))
+		if (!Directory.Exists(_generalOptions.FilesLocation))
 		{
-			Directory.CreateDirectory(_pathOptions.FilesLocation);
+			Directory.CreateDirectory(_generalOptions.FilesLocation);
 		}
 		
-		var filePath = Path.Combine(_pathOptions.FilesLocation, _pathOptions.UnsortedFileName);
+		var filePath = Path.Combine(_generalOptions.FilesLocation, _generalOptions.UnsortedFileName);
 		var desiredFileSize = (long)_fileGenerationOptions.FileSizeGb * 1024 * 1024 * 1024;
 
 		if (_fileGenerationOptions.Reuse 
 		    && File.Exists(filePath) 
 		    && (double)Math.Abs(new FileInfo(filePath).Length - desiredFileSize) / desiredFileSize < 0.01)
 		{
-			Console.WriteLine($"File {_pathOptions.UnsortedFileName} already exists, it's size is within 1% of desired, reusing it");
+			Console.WriteLine($"File {_generalOptions.UnsortedFileName} already exists, it's size is within 1% of desired, reusing it");
 			return;
 		}
 		
@@ -79,7 +79,7 @@ public class FileGenerator
 			});
 		
 		var sw = Stopwatch.StartNew();
-		Console.WriteLine($"Generating {_pathOptions.UnsortedFileName} file, size {_fileGenerationOptions.FileSizeGb} GB");
+		Console.WriteLine($"Generating {_generalOptions.UnsortedFileName} file, size {_fileGenerationOptions.FileSizeGb} GB");
 		
 		var loggerCancellationTokenSource = new CancellationTokenSource();
 		// ReSharper disable once MethodSupportsCancellation

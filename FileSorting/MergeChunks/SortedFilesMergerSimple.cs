@@ -1,12 +1,13 @@
 using System.Text;
+using LargeFileSort.Logging;
 
-namespace LargeFileSort.FileSorter.MergeChunks;
+namespace LargeFileSort.FileSorting.MergeChunks;
 
 public class SortedFilesMergerSimple
 {
-	private FileProgressLogger _logger;
+	private LiveProgressLogger _logger;
 
-	public SortedFilesMergerSimple(FileProgressLogger logger)
+	public SortedFilesMergerSimple(LiveProgressLogger logger)
 	{
 		_logger = logger;
 	}
@@ -49,7 +50,7 @@ public class SortedFilesMergerSimple
 					})
 			).ToList();
 		
-		var pq = new PriorityQueue<SimpleMergeItem, SimpleMergeKey>();
+		var pq = new PriorityQueue<MergeItem, MergeKey>();
 		
 		// populate queue
 		for (var i = 0; i < readers.Count; i++)
@@ -59,8 +60,8 @@ public class SortedFilesMergerSimple
 				continue;
 			_logger.BytesRead += line.Length;
 
-			var newItem = new SimpleMergeItem(line, i);
-			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
+			var newItem = new MergeItem(line, i);
+			pq.Enqueue(newItem, new MergeKey(newItem));
 		}
 		
 		// run until the queue is empty
@@ -77,8 +78,8 @@ public class SortedFilesMergerSimple
 				continue;
 			_logger.BytesRead += next.Length;
 			
-			var newItem = new SimpleMergeItem(next, item.SourceIndex);
-			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
+			var newItem = new MergeItem(next, item.SourceIndex);
+			pq.Enqueue(newItem, new MergeKey(newItem));
 		}
 		
 		loggerCancellationTokenSource.Cancel();

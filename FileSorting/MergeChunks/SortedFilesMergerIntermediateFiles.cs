@@ -1,12 +1,13 @@
 using System.Text;
+using LargeFileSort.Logging;
 
-namespace LargeFileSort.FileSorter.MergeChunks;
+namespace LargeFileSort.FileSorting.MergeChunks;
 
 public class SortedFilesMergerIntermediateFiles
 {
-	private FileProgressLogger _logger;
+	private LiveProgressLogger _logger;
 
-	public SortedFilesMergerIntermediateFiles(FileProgressLogger logger)
+	public SortedFilesMergerIntermediateFiles(LiveProgressLogger logger)
 	{
 		_logger = logger;
 	}
@@ -118,7 +119,7 @@ public class SortedFilesMergerIntermediateFiles
 				Access = FileAccess.Write
 			});
 		
-		var pq = new PriorityQueue<SimpleMergeItem, SimpleMergeKey>();
+		var pq = new PriorityQueue<MergeItem, MergeKey>();
 		
 		// populate queue
 		for (var i = 0; i < readers.Length; i++)
@@ -129,8 +130,8 @@ public class SortedFilesMergerIntermediateFiles
 			
 			_logger.BytesRead += line.Length;
 			
-			var newItem = new SimpleMergeItem(line, i);
-			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
+			var newItem = new MergeItem(line, i);
+			pq.Enqueue(newItem, new MergeKey(newItem));
 		}
 		
 		// run until the queue is empty
@@ -148,8 +149,8 @@ public class SortedFilesMergerIntermediateFiles
 				continue;
 			_logger.BytesRead += next.Length;
 			
-			var newItem = new SimpleMergeItem(next, item.SourceIndex);
-			pq.Enqueue(newItem, new SimpleMergeKey(newItem));
+			var newItem = new MergeItem(next, item.SourceIndex);
+			pq.Enqueue(newItem, new MergeKey(newItem));
 		}
 		
 		return writer.BaseStream.Length;

@@ -1,4 +1,4 @@
-namespace LargeFileSort.FileSorter;
+namespace LargeFileSort.FileSorting.ChunkInputFile;
 
 public class SortedChunk
 {
@@ -6,9 +6,9 @@ public class SortedChunk
 	
 	private readonly Line[] _lines;
 	private readonly int _linesCount;
-	private readonly CharChunk[] _subChunks;
+	private readonly UnsortedChunk[] _subChunks;
 
-	public SortedChunk(Line[] lines, CharChunk chunk, int chunkRank, int linesCount)
+	public SortedChunk(Line[] lines, UnsortedChunk chunk, int chunkRank, int linesCount)
 	{
 		_lines = lines;
 		_subChunks = [chunk];
@@ -57,10 +57,10 @@ public class SortedChunk
 		}
 	}
 
-	public long MergeToStream(SortedChunk second, StreamWriter stream, int bufferSize)
+	public long MergeToStream(SortedChunk secondChunk, StreamWriter stream, int bufferSize)
 	{
 		var chunkA = this;
-		var chunkB = second;
+		var chunkB = secondChunk;
 		
 		var i = 0;
 		var j = 0;
@@ -105,7 +105,7 @@ public class SortedChunk
 		return writer.BaseStream.Position;
 	}
 
-	private static int Compare(Line a, Line b, CharChunk[] chunkArrayA, CharChunk[] chunkArrayB)
+	private static int Compare(Line a, Line b, UnsortedChunk[] chunkArrayA, UnsortedChunk[] chunkArrayB)
 	{
 		var prefixComparison = a.Prefix.CompareTo(b.Prefix);
 		if (prefixComparison != 0)
