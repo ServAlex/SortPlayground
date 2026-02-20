@@ -11,7 +11,7 @@ public static class OptionsHelper
 		var errors = new List<string>();
 
 		var generationOptions = TryInstantiate<FileGenerationOptions>(serviceProvider, errors);
-		var pathOptions = TryInstantiate<PathOptions>(serviceProvider, errors);
+		var pathOptions = TryInstantiate<GeneralOptions>(serviceProvider, errors);
 		var sortOptions = TryInstantiate<SortOptions>(serviceProvider, errors);
 
 		if (errors.Count != 0)
@@ -40,10 +40,10 @@ public static class OptionsHelper
 			{ "--reuseChunks", $"{nameof(SortOptions)}:{nameof(SortOptions.ReuseChunks)}" },
 			{ "--chunkFileSizeMb", $"{nameof(SortOptions)}:{nameof(SortOptions.IntermediateFileSizeMaxMb)}" },
 			{ "--baseChunkSizeMb", $"{nameof(SortOptions)}:{nameof(SortOptions.BaseChunkSizeMb)}" },
-			{ "--memoryBudgetGb", $"{nameof(SortOptions)}:{nameof(SortOptions.MemoryBudgetGb)}" },
 	
-			{ "--path", $"{nameof(PathOptions)}:{nameof(PathOptions.FilesLocation)}" },
-			{ "--delete", $"{nameof(PathOptions)}:{nameof(PathOptions.DeleteAllCreatedFiles)}" },
+			{ "--path", $"{nameof(GeneralOptions)}:{nameof(GeneralOptions.FilesLocation)}" },
+			{ "--delete", $"{nameof(GeneralOptions)}:{nameof(GeneralOptions.DeleteAllCreatedFiles)}" },
+			{ "--memoryBudgetGb", $"{nameof(GeneralOptions)}:{nameof(GeneralOptions.MemoryBudgetGb)}" },
 		};
 	}
 	

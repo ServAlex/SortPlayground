@@ -1,12 +1,13 @@
 using System.Text;
+using LargeFileSort.Logging;
 
 namespace LargeFileSort.FileSorting.MergeChunks;
 
 public class SortedFilesMergerSimple
 {
-	private FileProgressLogger _logger;
+	private LiveProgressLogger _logger;
 
-	public SortedFilesMergerSimple(FileProgressLogger logger)
+	public SortedFilesMergerSimple(LiveProgressLogger logger)
 	{
 		_logger = logger;
 	}

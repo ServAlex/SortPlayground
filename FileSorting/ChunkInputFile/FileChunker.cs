@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
 using LargeFileSort.Configurations;
+using LargeFileSort.Logging;
 using Microsoft.Extensions.Options;
 
 namespace LargeFileSort.FileSorting.ChunkInputFile;
@@ -33,9 +34,9 @@ public class FileChunker
 	private long _inputFileSize;
 	
 	private readonly SortOptions _sortOptions;
-	private readonly FileProgressLogger _logger;
+	private readonly LiveProgressLogger _logger;
 
-	public FileChunker(IOptions<SortOptions> sortOptions, IOptions<PathOptions> pathOptions, FileProgressLogger logger)
+	public FileChunker(IOptions<SortOptions> sortOptions, IOptions<GeneralOptions> generalOptions, LiveProgressLogger logger)
 	{
 		_sortOptions = sortOptions.Value;
 		_logger = logger;
@@ -45,14 +46,14 @@ public class FileChunker
 		_sortWorkerCount = Environment.ProcessorCount - 2 - _mergeWorkerCount;
 		_queueLength = _sortOptions.QueueLength;
 		_baseChunkSize = _sortOptions.BaseChunkSizeMb * 1024 * 1024;
-		_memoryBudgetMb = _sortOptions.MemoryBudgetGb * 1024;
 		
 		_maxRank = MaxRank((int)(_sortOptions.IntermediateFileSizeMaxMb/2.0 * 1024 * 1024), _baseChunkSize);
 		_sortedChunks = new SortedChunk?[_maxRank + 1];
 		
-		var pathOptionsValue = pathOptions.Value;
-		_unsortedFilePath = Path.Combine(pathOptionsValue.FilesLocation, pathOptionsValue.UnsortedFileName);
-		_chunkDirectoryPath = Path.Combine(pathOptionsValue.FilesLocation, pathOptionsValue.ChunksDirectoryBaseName);
+		var generalOptionsValue = generalOptions.Value;
+		_memoryBudgetMb = generalOptionsValue.MemoryBudgetGb * 1024;
+		_unsortedFilePath = Path.Combine(generalOptionsValue.FilesLocation, generalOptionsValue.UnsortedFileName);
+		_chunkDirectoryPath = Path.Combine(generalOptionsValue.FilesLocation, generalOptionsValue.ChunksDirectoryBaseName);
 		
 		_sortChannel = Channel.CreateBounded<UnsortedChunk>(
 			new BoundedChannelOptions(_queueLength)

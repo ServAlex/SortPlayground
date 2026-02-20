@@ -3,22 +3,23 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
 using LargeFileSort.Configurations;
+using LargeFileSort.Logging;
 using Microsoft.Extensions.Options;
 
 namespace LargeFileSort.FileSorting.MergeChunks;
 
 public class SortedFilesMerger(
-	IOptions<PathOptions> pathOptions, 
+	IOptions<GeneralOptions> generalOptions, 
 	IOptions<SortOptions> sortOptions, 
-	FileProgressLogger logger)
+	LiveProgressLogger logger)
 {
-	private readonly PathOptions _pathOptions = pathOptions.Value;
+	private readonly GeneralOptions _generalOptions = generalOptions.Value;
 	private readonly SortOptions _sortOptions = sortOptions.Value;
 	
 	public long MergeSortedFiles()
 	{
-		var chunksDirectoryPath = Path.Combine(_pathOptions.FilesLocation, pathOptions.Value.ChunksDirectoryBaseName);
-		var sortedFilePath = Path.Combine(_pathOptions.FilesLocation, pathOptions.Value.SortedFileName);
+		var chunksDirectoryPath = Path.Combine(_generalOptions.FilesLocation, _generalOptions.ChunksDirectoryBaseName);
+		var sortedFilePath = Path.Combine(_generalOptions.FilesLocation, _generalOptions.SortedFileName);
 		
 		Console.WriteLine();
 		Console.WriteLine($"SORT STEP 2: merging chunks to final file {sortedFilePath}: several Stage 1 mergers merge files to batches in parallel, feed batches to a single Stage 2 merger which writes to final file");
@@ -39,7 +40,7 @@ public class SortedFilesMerger(
 		const int empiricalConstant = 600;
 		var intermediateChannelCapacity = (int)Math.Min(
 			100, 
-			(long)_sortOptions.MemoryBudgetGb*1024*1024*1024/batchSize/intermediateMergeThreads/empiricalConstant);
+			(long)_generalOptions.MemoryBudgetGb*1024*1024*1024/batchSize/intermediateMergeThreads/empiricalConstant);
 		
 		var intermediateChannels = Enumerable
 			.Range(0, intermediateMergeThreads)

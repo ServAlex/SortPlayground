@@ -4,6 +4,7 @@ using LargeFileSort.FileGeneration;
 using LargeFileSort.FileSorting;
 using LargeFileSort.FileSorting.ChunkInputFile;
 using LargeFileSort.FileSorting.MergeChunks;
+using LargeFileSort.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -17,13 +18,13 @@ builder.Services.AddTransient<FileSorter>();
 builder.Services.AddTransient<FileChunker>();
 builder.Services.AddTransient<SortedFilesMerger>();
 builder.Services.AddTransient<LeftoversRemover>();
-builder.Services.AddTransient<FileProgressLogger>();
+builder.Services.AddTransient<LiveProgressLogger>();
 
 builder.Services.AddOptions<FileGenerationOptions>()
 	.Bind(builder.Configuration.GetSection(nameof(FileGenerationOptions)))
 	.ValidateDataAnnotations();
-builder.Services.AddOptions<PathOptions>()
-	.Bind(builder.Configuration.GetSection(nameof(PathOptions)))
+builder.Services.AddOptions<GeneralOptions>()
+	.Bind(builder.Configuration.GetSection(nameof(GeneralOptions)))
 	.ValidateDataAnnotations();
 builder.Services.AddOptions<SortOptions>()
 	.Bind(builder.Configuration.GetSection(nameof(SortOptions)))

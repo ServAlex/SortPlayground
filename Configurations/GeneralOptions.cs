@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace LargeFileSort.Configurations;
 
-public sealed class PathOptions
+public sealed class GeneralOptions
 {
 	[Required]
 	public required bool DeleteAllCreatedFiles { get; set; }
@@ -17,6 +17,10 @@ public sealed class PathOptions
 	
 	[Required]
 	public required string ChunksDirectoryBaseName { get; set; }
+	
+	[Required]
+	[Range(8, 128)]
+	public required int MemoryBudgetGb { get; set; }
 	
 	[Required]
 	public required bool KeepChunks { get; set; }

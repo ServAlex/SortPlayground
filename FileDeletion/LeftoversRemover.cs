@@ -5,35 +5,35 @@ namespace LargeFileSort.FileDeletion;
 
 public class LeftoversRemover
 {
-	private PathOptions PathOptions { get; }
+	private GeneralOptions GeneralOptions { get; }
 	
-	public LeftoversRemover(IOptions<PathOptions> pathOptions)
+	public LeftoversRemover(IOptions<GeneralOptions> pathOptions)
 	{
-		PathOptions = pathOptions.Value;
+		GeneralOptions = pathOptions.Value;
 	}
 
 	public void Remove()
 	{
-		var chunksDirectoryPath = Path.Combine(PathOptions.FilesLocation, PathOptions.ChunksDirectoryBaseName);
-		if ((!PathOptions.KeepChunks || PathOptions.DeleteAllCreatedFiles) && Directory.Exists(chunksDirectoryPath))
+		var chunksDirectoryPath = Path.Combine(GeneralOptions.FilesLocation, GeneralOptions.ChunksDirectoryBaseName);
+		if ((!GeneralOptions.KeepChunks || GeneralOptions.DeleteAllCreatedFiles) && Directory.Exists(chunksDirectoryPath))
 		{
 			Console.WriteLine($"Deleted chunks directory at {chunksDirectoryPath}");
 			Directory.Delete(chunksDirectoryPath, true);
 		}
 		
-		if (!PathOptions.DeleteAllCreatedFiles)
+		if (!GeneralOptions.DeleteAllCreatedFiles)
 		{
 			return;
 		}
 		
-		var unsortedFilePath = Path.Combine(PathOptions.FilesLocation, PathOptions.UnsortedFileName);
+		var unsortedFilePath = Path.Combine(GeneralOptions.FilesLocation, GeneralOptions.UnsortedFileName);
 		if (File.Exists(unsortedFilePath))
 		{
 			Console.WriteLine($"Deleted unsorted file at {unsortedFilePath}");
 			File.Delete(unsortedFilePath);
 		}
 			
-		var sortedFilePath = Path.Combine(PathOptions.FilesLocation, PathOptions.SortedFileName);
+		var sortedFilePath = Path.Combine(GeneralOptions.FilesLocation, GeneralOptions.SortedFileName);
 		if (File.Exists(sortedFilePath))
 		{
 			Console.WriteLine($"Deleted sorted file at {sortedFilePath}");
