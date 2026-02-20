@@ -1,4 +1,4 @@
-namespace LargeFileSort.FileSorting;
+namespace LargeFileSort.FileSorting.ChunkInputFile;
 
 public sealed class UnsortedChunk
 {

@@ -1,4 +1,4 @@
-namespace LargeFileSort.FileSorting;
+namespace LargeFileSort.FileSorting.ChunkInputFile;
 
 /// <summary>
 /// represents a single line in a char[] buffer
