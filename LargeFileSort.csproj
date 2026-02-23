@@ -26,18 +26,21 @@
       <None Remove="test10.txt" />
       <None Remove="test20.txt" />
       <None Remove="test100.txt" />
+      <None Remove="SortArtifacts\**" />
     </ItemGroup>
 
     <ItemGroup>
       <Compile Remove="Junk\**" />
       <Compile Remove="Chunks100\**" />
       <Compile Remove="Chunks10\**" />
+      <Compile Remove="SortArtifacts\**" />
     </ItemGroup>
 
     <ItemGroup>
       <EmbeddedResource Remove="Junk\**" />
       <EmbeddedResource Remove="Chunks100\**" />
       <EmbeddedResource Remove="Chunks10\**" />
+      <EmbeddedResource Remove="SortArtifacts\**" />
     </ItemGroup>
 
 </Project>
