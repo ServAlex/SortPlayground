@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
 using LargeFileSort.Configurations;
+using LargeFileSort.Infrastructure;
 using LargeFileSort.Logging;
 using Microsoft.Extensions.Options;
 
@@ -11,22 +12,27 @@ namespace LargeFileSort.FileSorting.MergeChunks;
 public class SortedFilesMerger(
 	IOptions<GeneralOptions> generalOptions, 
 	IOptions<SortOptions> sortOptions, 
-	LiveProgressLogger logger)
+	LiveProgressLogger logger,
+	IFileSystem fileSystem)
 {
 	private readonly GeneralOptions _generalOptions = generalOptions.Value;
 	private readonly SortOptions _sortOptions = sortOptions.Value;
-	
+
 	public long MergeSortedFiles()
 	{
 		var chunksDirectoryPath = Path.Combine(_generalOptions.FilesLocation, _generalOptions.ChunksDirectoryBaseName);
 		var sortedFilePath = Path.Combine(_generalOptions.FilesLocation, _generalOptions.SortedFileName);
 		
 		Console.WriteLine();
-		Console.WriteLine($"SORT STEP 2: merging chunks to final file {sortedFilePath}: several Stage 1 mergers merge files to batches in parallel, feed batches to a single Stage 2 merger which writes to final file");
+		Console.WriteLine($"SORT STEP 2: merging chunks to final file {sortedFilePath}: " +
+		                  $"several Stage 1 mergers merge files to batches in parallel, " +
+		                  $"feed batches to a single Stage 2 merger which writes to final file");
 		Console.WriteLine();
-		var sw = Stopwatch.StartNew();
 
 		var files = ValidatedChunkFiles(chunksDirectoryPath);
+		CheckIfEnoughSpace(files, sortedFilePath);
+		
+		var sw = Stopwatch.StartNew();
 		var chunksCount = files.Length;
 		
 		var intermediateMergeThreads =
@@ -100,7 +106,8 @@ public class SortedFilesMerger(
 	{
 		if (!Directory.Exists(chunksDirectoryPath))
 		{
-			throw new FileNotFoundException($"Chunks directory '{chunksDirectoryPath}' does not exist. Nothing to merge.");
+			throw new FileNotFoundException($"Chunks directory '{chunksDirectoryPath}' does not exist. " +
+			                                $"Nothing to merge.");
 		}
 		
 		var files = new DirectoryInfo(chunksDirectoryPath).GetFiles();
@@ -110,6 +117,17 @@ public class SortedFilesMerger(
 		}
 
 		return files;
+	}
+
+	private void CheckIfEnoughSpace(FileInfo[] files, string path)
+	{
+		var totalSize = files.Sum(f => f.Length);
+
+		if (!fileSystem.HasEnoughFreeSpace(path, totalSize))
+		{
+			throw new IOException($"Not enough free space on disk to merge {files.Length} chunk files " +
+			                      $"into final file {path}");
+		}
 	}
 
 	private async Task MergeFiles(

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using LargeFileSort.Configurations;
+using LargeFileSort.Infrastructure;
 using LargeFileSort.Logging;
 using Microsoft.Extensions.Options;
 
@@ -11,10 +12,16 @@ public class FileGenerator
 	private readonly FileGenerationOptions _fileGenerationOptions;
 	private readonly GeneralOptions _generalOptions;
 	private readonly LiveProgressLogger _logger;
+	private readonly IFileSystem _fileSystem;
 
-	public FileGenerator(IOptions<FileGenerationOptions> fileGenerationOptions, IOptions<GeneralOptions> pathOptions, LiveProgressLogger logger)
+	public FileGenerator(
+		IOptions<FileGenerationOptions> fileGenerationOptions, 
+		IOptions<GeneralOptions> pathOptions, 
+		LiveProgressLogger logger, 
+		IFileSystem fileSystem)
 	{
 		_logger = logger;
+		_fileSystem = fileSystem;
 		_fileGenerationOptions = fileGenerationOptions.Value;
 		_generalOptions = pathOptions.Value;
 	}
@@ -64,8 +71,16 @@ public class FileGenerator
 		    && File.Exists(filePath) 
 		    && (double)Math.Abs(new FileInfo(filePath).Length - desiredFileSize) / desiredFileSize < 0.01)
 		{
-			Console.WriteLine($"File {_generalOptions.UnsortedFileName} already exists, it's size is within 1% of desired, reusing it");
+			Console.WriteLine($"File {_generalOptions.UnsortedFileName} already exists, " +
+			                  $"it's size is within 1% of desired, reusing it");
 			return;
+		}
+		
+		if (!_fileSystem.HasEnoughFreeSpace(_generalOptions.FilesLocation, desiredFileSize))
+		{
+			throw new IOException($"Not enough free space on disk to create {_generalOptions.UnsortedFileName} file, " +
+			                      $"you may reduce --sizeGb in options - generate smaller input file, " +
+			                      $"keep in mind sort will require 2 times more free space than this file size");
 		}
 		
 		using var writer = new StreamWriter(
@@ -79,7 +94,8 @@ public class FileGenerator
 			});
 		
 		var sw = Stopwatch.StartNew();
-		Console.WriteLine($"Generating {_generalOptions.UnsortedFileName} file, size {_fileGenerationOptions.FileSizeGb} GB");
+		Console.WriteLine($"Generating {_generalOptions.UnsortedFileName} file, " +
+		                  $"size {_fileGenerationOptions.FileSizeGb} GB");
 		
 		var loggerCancellationTokenSource = new CancellationTokenSource();
 		// ReSharper disable once MethodSupportsCancellation
@@ -117,7 +133,8 @@ public class FileGenerator
 		
 		loggerCancellationTokenSource.Cancel();
 		Console.WriteLine();
-		Console.WriteLine($"File generated with length {writer.BaseStream.Length / 1024 / 1024 } MB in {sw.ElapsedMilliseconds/1000.0:F1} s");
+		Console.WriteLine($"File generated with length {writer.BaseStream.Length / 1024 / 1024 } MB " +
+		                  $"in {sw.ElapsedMilliseconds/1000.0:F1} s");
 		Console.WriteLine();
 	}
 }
