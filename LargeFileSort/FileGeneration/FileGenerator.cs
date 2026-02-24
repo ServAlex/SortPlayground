@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using LargeFileSort.Common;
 using LargeFileSort.Configurations;
 using LargeFileSort.Infrastructure;
 using LargeFileSort.Logging;
@@ -78,9 +79,8 @@ public class FileGenerator
 		
 		if (!_fileSystem.HasEnoughFreeSpace(_generalOptions.FilesLocation, desiredFileSize))
 		{
-			throw new IOException($"Not enough free space on disk to create {_generalOptions.UnsortedFileName} file, " +
-			                      $"you may reduce --sizeGb in options - generate smaller input file, " +
-			                      $"keep in mind sort will require 2 times more free space than this file size");
+			throw new InsufficientFreeDiskException($"Not enough free space on disk to " +
+			                                        $"create {_generalOptions.UnsortedFileName} file");
 		}
 		
 		using var writer = new StreamWriter(

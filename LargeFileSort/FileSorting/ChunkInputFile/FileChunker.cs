@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
+using LargeFileSort.Common;
 using LargeFileSort.Configurations;
 using LargeFileSort.Infrastructure;
 using LargeFileSort.Logging;
@@ -150,8 +151,7 @@ public class FileChunker
 		var gcInfo = GC.GetGCMemoryInfo();
 		if (_memoryBudgetGb > (gcInfo.TotalAvailableMemoryBytes - gcInfo.MemoryLoadBytes) / 1024d / 1024 / 1024)
 		{
-			throw new IOException($"Not enough free RAM to create chunks directory {_chunkDirectoryPath}, " +
-			                      $"you may reduce --memoryBudgetGb and maybe --chunkFileSizeMb in options.");
+			throw new InsufficientFreeMemoryException("Not enough free RAM");
 		}
 
 		if (Directory.Exists(_chunkDirectoryPath))
@@ -161,8 +161,8 @@ public class FileChunker
 		
 		if (!_fileSystem.HasEnoughFreeSpace(_chunkDirectoryPath, _inputFileSize))
 		{
-			throw new IOException($"Not enough free space on disk to create chunks directory {_chunkDirectoryPath}, " +
-			                      $"you may reduce --sizeGb in options - generate smaller input file.");
+			throw new InsufficientFreeDiskException($"Not enough free space on disk to create " +
+			                                        $"chunks directory {_chunkDirectoryPath}");
 		}
 		
 		Directory.CreateDirectory(_chunkDirectoryPath);

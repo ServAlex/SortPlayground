@@ -1,4 +1,5 @@
-﻿using LargeFileSort.Configurations;
+﻿using LargeFileSort.Common;
+using LargeFileSort.Configurations;
 using LargeFileSort.FileDeletion;
 using LargeFileSort.FileGeneration;
 using LargeFileSort.FileSorting;
@@ -53,6 +54,16 @@ catch (Exception e)
 
 		case FileNotFoundException:
 			Console.Error.WriteLine(e.Message);
+			return 1;
+		
+		case InsufficientFreeMemoryException:
+			Console.Error.WriteLine($"{e.Message}");
+			Console.Error.WriteLine("you may reduce --memoryBudgetGb and maybe --chunkFileSizeMb in options.");
+			return 1;
+		
+		case InsufficientFreeDiskException:
+			Console.Error.WriteLine(e.Message);
+			Console.Error.WriteLine("you may reduce --sizeGb in options - generate smaller input file.");
 			return 1;
 
 		default:

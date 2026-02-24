@@ -2,6 +2,7 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
+using LargeFileSort.Common;
 using LargeFileSort.Configurations;
 using LargeFileSort.Infrastructure;
 using LargeFileSort.Logging;
@@ -125,8 +126,8 @@ public class SortedFilesMerger(
 
 		if (!fileSystem.HasEnoughFreeSpace(path, totalSize))
 		{
-			throw new IOException($"Not enough free space on disk to merge {files.Length} chunk files " +
-			                      $"into final file {path}");
+			throw new InsufficientFreeDiskException($"Not enough free space on disk to merge {files.Length} " +
+			                                        $"chunk files into final file {path}");
 		}
 	}
 
