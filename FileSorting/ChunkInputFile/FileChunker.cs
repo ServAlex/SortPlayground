@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
 using LargeFileSort.Configurations;
+using LargeFileSort.Infrastructure;
 using LargeFileSort.Logging;
 using Microsoft.Extensions.Options;
 
@@ -31,14 +32,17 @@ public class FileChunker
 	
 	private readonly SortOptions _sortOptions;
 	private readonly LiveProgressLogger _logger;
+	private readonly IFileSystem _fileSystem;
 
 	public FileChunker(
 		IOptions<SortOptions> sortOptions, 
 		IOptions<GeneralOptions> generalOptions, 
-		LiveProgressLogger logger)
+		LiveProgressLogger logger, 
+		IFileSystem fileSystem)
 	{
 		_sortOptions = sortOptions.Value;
 		_logger = logger;
+		_fileSystem = fileSystem;
 		_sortWorkerCount = Environment.ProcessorCount 
 		                   - _sortOptions.MergeToFileWorkerCount 
 		                   - _sortOptions.MergeWorkerCount 
@@ -100,7 +104,7 @@ public class FileChunker
 				.ContinueWith(_ => FlushMergeQueue()),
 
 			// merge to file worker(s)
-			Task.WhenAll(Enumerable .Range(0, _sortOptions.MergeToFileWorkerCount) .Select(_ => Task.Run(MergeToFileAsync))),
+			Task.WhenAll(Enumerable.Range(0, _sortOptions.MergeToFileWorkerCount).Select(_ => Task.Run(MergeToFileAsync))),
 		};
 		
 		var loggerCancellationTokenSource = new CancellationTokenSource();
@@ -136,15 +140,31 @@ public class FileChunker
 		if (_inputFileSize == 0)
 		{
 			throw new FileNotFoundException(
-				$"Chunker did not find unsorted file {_unsortedFilePath} or it's empty, and it could not reuse existing chunks."
-				+ Environment.NewLine
-				+ $"Add '--generate true' to generate file or '--reuseChunks true' if chunks exist in {_chunkDirectoryPath}");
+				$"Chunker did not find unsorted file {_unsortedFilePath} or it's empty, " +
+				$"and it could not reuse existing chunks." + 
+				Environment.NewLine + 
+				$"Add '--generate true' to generate file or " +
+				$"'--reuseChunks true' if chunks exist in {_chunkDirectoryPath}");
+		}
+		
+		var gcInfo = GC.GetGCMemoryInfo();
+		if (_memoryBudgetGb > (gcInfo.TotalAvailableMemoryBytes - gcInfo.MemoryLoadBytes) / 1024d / 1024 / 1024)
+		{
+			throw new IOException($"Not enough free RAM to create chunks directory {_chunkDirectoryPath}, " +
+			                      $"you may reduce --memoryBudgetGb and maybe --chunkFileSizeMb in options.");
 		}
 
 		if (Directory.Exists(_chunkDirectoryPath))
 		{
 			Directory.Delete(_chunkDirectoryPath, true);
 		}
+		
+		if (!_fileSystem.HasEnoughFreeSpace(_chunkDirectoryPath, _inputFileSize))
+		{
+			throw new IOException($"Not enough free space on disk to create chunks directory {_chunkDirectoryPath}, " +
+			                      $"you may reduce --sizeGb in options - generate smaller input file.");
+		}
+		
 		Directory.CreateDirectory(_chunkDirectoryPath);
 		return true;
 	}

@@ -9,5 +9,7 @@ riderModule.iml
 Chunks/
 Chunks*
 
+SortArtifacts/
+
 .idea/
 *.txt

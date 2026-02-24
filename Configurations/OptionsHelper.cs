@@ -50,9 +50,9 @@ public static class OptionsHelper
 	
 	public static string GetHelpText()
 	{
-		var mappings = GetSwitchMappings();
 		var sb = new StringBuilder();
 		sb.AppendLine("Options:");
+		//var mappings = GetSwitchMappings();
 		// foreach (var (key, value) in mappings)
 		// {
 		// 	sb.AppendLine($"  {key}");
