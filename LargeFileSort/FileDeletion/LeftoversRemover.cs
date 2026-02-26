@@ -1,4 +1,5 @@
 using LargeFileSort.Configurations;
+using LargeFileSort.Infrastructure;
 using Microsoft.Extensions.Options;
 
 namespace LargeFileSort.FileDeletion;
@@ -6,9 +7,11 @@ namespace LargeFileSort.FileDeletion;
 public class LeftoversRemover
 {
 	private GeneralOptions GeneralOptions { get; }
+	private IFileSystem FileSystem { get; }
 	
-	public LeftoversRemover(IOptions<GeneralOptions> pathOptions)
+	public LeftoversRemover(IOptions<GeneralOptions> pathOptions, IFileSystem fileSystem)
 	{
+		FileSystem = fileSystem;
 		GeneralOptions = pathOptions.Value;
 	}
 
@@ -27,14 +30,14 @@ public class LeftoversRemover
 		}
 		
 		var unsortedFilePath = Path.Combine(GeneralOptions.FilesLocation, GeneralOptions.UnsortedFileName);
-		if (File.Exists(unsortedFilePath))
+		if (FileSystem.FileExists(unsortedFilePath))
 		{
 			Console.WriteLine($"Deleted unsorted file at {unsortedFilePath}");
 			File.Delete(unsortedFilePath);
 		}
 			
 		var sortedFilePath = Path.Combine(GeneralOptions.FilesLocation, GeneralOptions.SortedFileName);
-		if (File.Exists(sortedFilePath))
+		if (FileSystem.FileExists(sortedFilePath))
 		{
 			Console.WriteLine($"Deleted sorted file at {sortedFilePath}");
 			File.Delete(sortedFilePath);

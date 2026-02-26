@@ -129,7 +129,7 @@ public class FileChunker
 
 	private bool ShouldContinue()
 	{
-		_inputFileSize = File.Exists(_unsortedFilePath) ? new FileInfo(_unsortedFilePath).Length : 0;
+		_inputFileSize = _fileSystem.FileExists(_unsortedFilePath) ? _fileSystem.GetFileSize(_unsortedFilePath) : 0;
 		
 		if (Directory.Exists(_chunkDirectoryPath) && _sortOptions.ReuseChunks)
 		{

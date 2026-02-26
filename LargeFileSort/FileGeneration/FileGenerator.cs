@@ -69,8 +69,8 @@ public class FileGenerator
 		var desiredFileSize = (long)_fileGenerationOptions.FileSizeGb * 1024 * 1024 * 1024;
 
 		if (_fileGenerationOptions.Reuse 
-		    && File.Exists(filePath) 
-		    && (double)Math.Abs(new FileInfo(filePath).Length - desiredFileSize) / desiredFileSize < 0.01)
+		    && _fileSystem.FileExists(filePath) 
+		    && (double)Math.Abs(_fileSystem.GetFileSize(filePath) - desiredFileSize) / desiredFileSize < 0.01)
 		{
 			Console.WriteLine($"File {_generalOptions.UnsortedFileName} already exists, " +
 			                  $"it's size is within 1% of desired, reusing it");
