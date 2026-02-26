@@ -1,7 +1,7 @@
 using LargeFileSort.Common;
 using LargeFileSort.Configurations;
 using LargeFileSort.FileDeletion;
-using LargeFileSort.FileGeneration;
+using LargeFileSort.FileSorting;
 using LargeFileSort.FileSorting.ChunkInputFile;
 using LargeFileSort.FileSorting.MergeChunks;
 using LargeFileSort.Infrastructure;
@@ -11,7 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LargeFileSort.Tests.Component;
 
-public class FileGeneratorTests
+public class FileSorterTests
 {
 	[Fact]
 	public void GenerateFile_ShouldThrowInsufficientDiskSpaceException_WhenDiskSpaceIsInsufficient()
@@ -19,27 +19,34 @@ public class FileGeneratorTests
 		var services = new ServiceCollection();
 		var fakeFileSystem = new FakeFileSystem
 		{
-			HasEnoughSpaceResult = false
+			HasEnoughSpaceResult = false,
+			FileExistsResult = true,
+			GetFileSizeResult = 100
 		};
 
 		services.AddSingleton<IFileSystem>(fakeFileSystem);
-		
+
 		// Register real services
-		services.AddSingleton<FileGenerator>();
-		//services.AddSingleton<FileSorter>();
+		//services.AddSingleton<FileGenerator>();
+		services.AddSingleton<FileSorter>();
 		services.AddSingleton<FileChunker>();
 		services.AddSingleton<SortedFilesMerger>();
 		services.AddSingleton<LeftoversRemover>();
 		services.AddSingleton<LiveProgressLogger>();
 
-		// Add configuration if needed
-		services.Configure<FileGenerationOptions>(options =>
+		services.Configure<SortOptions>(options =>
 		{
 			options.Enabled = true;
-			options.Reuse = true;
-			options.FileSizeGb = 10;
+			options.ReuseChunks = false;
+			options.IntermediateFileSizeMaxMb = 100;
+			options.BaseChunkSizeMb = 10;
+			options.SortWorkerCount = 1;
+			options.MergeWorkerCount = 1;
+			options.MergeToFileWorkerCount = 1;
+			options.BufferSizeMb = 1;
+			options.QueueLength = 1;
 		});
-		
+
 		services.Configure<GeneralOptions>(options =>
 		{
 			options.FilesLocation = ".";
@@ -52,11 +59,7 @@ public class FileGeneratorTests
 		});
 
 		var provider = services.BuildServiceProvider();
-		var generator = provider.GetRequiredService<FileGenerator>();
-
-		Assert.Throws<InsufficientFreeDiskException>(() =>
-		{
-			generator.GenerateFile();
-		});
+		var sorter = provider.GetRequiredService<FileSorter>();
+		Assert.Throws<InsufficientFreeDiskException>(() => { sorter.SortFile(); });
 	}
 }
