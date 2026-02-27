@@ -4,15 +4,25 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LargeFileSort.Tests.Integration;
 
-public class EndToEndTests
+public class EndToEndTests : IDisposable
 {
+	private readonly string _tempDir;
+	public EndToEndTests()
+	{
+		_tempDir = Path.Combine(Path.GetTempPath(), "LargeFileSortE2ETest");
+		if (Directory.Exists(_tempDir))
+		{
+			Directory.Delete(_tempDir, true);
+		}
+		Directory.CreateDirectory(_tempDir);
+	}
+	
 	[Fact]
+	[Trait("Category", "Integration")]	
 	public void Application_ShouldOutputSortedFile_WhenRun()
 	{
-		var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-		var outputFileName = "sorted.txt";
-		Directory.CreateDirectory(tempDir);
-		
+		const string outputFileName = "sorted.txt";
+
 		var builder = Program.CreateAppBuilder([]);
 
 		builder.Configuration.Sources.Clear();
@@ -35,18 +45,18 @@ public class EndToEndTests
 				["GeneralOptions:DeleteAllCreatedFiles"] = "false",
 				["GeneralOptions:UnsortedFileName"] = "unsorted.txt",
 				["GeneralOptions:SortedFileName"] = outputFileName,
-				["GeneralOptions:FilesLocation"] = tempDir,
+				["GeneralOptions:FilesLocation"] = _tempDir,
 				["GeneralOptions:ChunksDirectoryBaseName"] = "Chunks",
 				["GeneralOptions:MemoryBudgetGb"] = "4",
 				["GeneralOptions:KeepChunks"] = "true",
 			});
 
 		var host = builder.Build();
-		
+
 		OptionsHelper.ValidateConfiguration(host.Services);
 		host.Services.GetRequiredService<ApplicationRunner>().Run();
 
-		var lines = File.ReadAllLines(Path.Combine(tempDir, outputFileName));
+		var lines = File.ReadAllLines(Path.Combine(_tempDir, outputFileName));
 
 		var lastLine = ParseLine(lines[0]);
 		for (var i = 1; i < lines.Length; i++)
@@ -55,8 +65,6 @@ public class EndToEndTests
 			Assert.True(Compare(lastLine, newLine) <= 0);
 			lastLine = newLine;
 		}
-
-		Directory.Delete(tempDir, true);
 	}
 
 	private record Line(string FullLine, int Number, int TextOffset, int TextLength);
@@ -90,4 +98,11 @@ public class EndToEndTests
 		return new Line(line, number, textOffset, textLength);
 	}
 
+	public void Dispose()
+	{
+		if (Directory.Exists(_tempDir))
+		{
+			Directory.Delete(_tempDir, true);
+		}
+	}
 }
