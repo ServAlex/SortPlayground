@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text;
 using System.Threading.Channels;
 using LargeFileSort.Common;
 using LargeFileSort.Configurations;
@@ -131,7 +130,7 @@ public class FileChunker
 	{
 		_inputFileSize = _fileSystem.FileExists(_unsortedFilePath) ? _fileSystem.GetFileSize(_unsortedFilePath) : 0;
 		
-		if (Directory.Exists(_chunkDirectoryPath) && _sortOptions.ReuseChunks)
+		if (_fileSystem.DirectoryExists(_chunkDirectoryPath) && _sortOptions.ReuseChunks)
 		{
 			Console.WriteLine($"Reusing chunks from {_chunkDirectoryPath}");
 			Console.WriteLine();
@@ -154,9 +153,9 @@ public class FileChunker
 			throw new InsufficientFreeMemoryException("Not enough free RAM");
 		}
 
-		if (Directory.Exists(_chunkDirectoryPath))
+		if (_fileSystem.DirectoryExists(_chunkDirectoryPath))
 		{
-			Directory.Delete(_chunkDirectoryPath, true);
+			_fileSystem.DeleteDirectory(_chunkDirectoryPath, true);
 		}
 		
 		if (!_fileSystem.HasEnoughFreeSpace(_chunkDirectoryPath, _inputFileSize))
@@ -165,7 +164,7 @@ public class FileChunker
 			                                        $"chunks directory {_chunkDirectoryPath}");
 		}
 		
-		Directory.CreateDirectory(_chunkDirectoryPath);
+		_fileSystem.CreateDirectory(_chunkDirectoryPath);
 		return true;
 	}
 
@@ -173,15 +172,8 @@ public class FileChunker
 	{
 		_logger.LogSingleMessage($"Started reading {_unsortedFilePath}");
 
-		using var reader = new StreamReader(
-			_unsortedFilePath,
-			Encoding.UTF8,
-			true,
-			new FileStreamOptions
-			{
-				BufferSize = _sortOptions.BufferSizeMb * 1024 * 1024,
-				Options = FileOptions.SequentialScan
-			});
+		using var reader = _fileSystem.GetFileReader(
+			_unsortedFilePath, _sortOptions.BufferSizeMb * 1024 * 1024);
 		
 		var chunk = new UnsortedChunk(_baseChunkSize);
 		bool isReadToEnd;
@@ -332,15 +324,7 @@ public class FileChunker
 			}
 
 			var path = Path.Combine(_chunkDirectoryPath, filename);
-			await using var writer = new StreamWriter(
-				path,
-				Encoding.UTF8, 
-				new FileStreamOptions
-				{
-					BufferSize = _sortOptions.BufferSizeMb * 1024 * 1024,
-					Mode = FileMode.Create, 
-					Access = FileAccess.Write
-				});
+			await using var writer = _fileSystem.GetFileWriter(path, _sortOptions.BufferSizeMb * 1024 * 1024);
 		
 			if (chunkB is not null)
 			{

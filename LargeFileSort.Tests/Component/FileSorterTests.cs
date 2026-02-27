@@ -6,25 +6,24 @@ using LargeFileSort.FileSorting.ChunkInputFile;
 using LargeFileSort.FileSorting.MergeChunks;
 using LargeFileSort.Infrastructure;
 using LargeFileSort.Logging;
-using LargeFileSort.Tests.Fakes;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 
 namespace LargeFileSort.Tests.Component;
 
 public class FileSorterTests
 {
 	[Fact]
-	public void GenerateFile_ShouldThrowInsufficientDiskSpaceException_WhenDiskSpaceIsInsufficient()
+	public void SortFile_ShouldThrowInsufficientDiskSpaceException_WhenDiskSpaceIsInsufficient()
 	{
 		var services = new ServiceCollection();
-		var fakeFileSystem = new FakeFileSystem
-		{
-			HasEnoughSpaceResult = false,
-			FileExistsResult = true,
-			GetFileSizeResult = 100
-		};
-
-		services.AddSingleton<IFileSystem>(fakeFileSystem);
+		
+		var fileSystemMock = Substitute.For<IFileSystem>();
+		fileSystemMock.HasEnoughFreeSpace(Arg.Any<string>(), Arg.Any<long>()).Returns(false);
+		fileSystemMock.FileExists(Arg.Any<string>()).Returns(true);
+		fileSystemMock.GetFileSize(Arg.Any<string>()).Returns(100);
+		
+		services.AddSingleton(fileSystemMock);
 
 		// Register real services
 		//services.AddSingleton<FileGenerator>();
@@ -49,7 +48,7 @@ public class FileSorterTests
 
 		services.Configure<GeneralOptions>(options =>
 		{
-			options.FilesLocation = ".";
+			options.FilesLocation = "";
 			options.UnsortedFileName = "unsorted.txt";
 			options.SortedFileName = "sorted.txt";
 			options.ChunksDirectoryBaseName = "chunks";

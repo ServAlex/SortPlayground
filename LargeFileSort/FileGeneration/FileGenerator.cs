@@ -59,10 +59,10 @@ public class FileGenerator
 			Console.WriteLine("Generation is not enabled in options, skipping");
 			return;
 		}
-		
-		if (!Directory.Exists(_generalOptions.FilesLocation))
+
+		if (!_fileSystem.DirectoryExists(_generalOptions.FilesLocation))
 		{
-			Directory.CreateDirectory(_generalOptions.FilesLocation);
+			_fileSystem.CreateDirectory(_generalOptions.FilesLocation);
 		}
 		
 		var filePath = Path.Combine(_generalOptions.FilesLocation, _generalOptions.UnsortedFileName);
@@ -82,16 +82,8 @@ public class FileGenerator
 			throw new InsufficientFreeDiskException($"Not enough free space on disk to " +
 			                                        $"create {_generalOptions.UnsortedFileName} file");
 		}
-		
-		using var writer = new StreamWriter(
-			filePath,
-			Encoding.UTF8, 
-			new FileStreamOptions
-			{
-				BufferSize = 1 << 22, 
-				Mode = FileMode.Create, 
-				Access = FileAccess.Write
-			});
+
+		using var writer = _fileSystem.GetFileWriter(filePath, 4 * 1024 * 1024);
 		
 		var sw = Stopwatch.StartNew();
 		Console.WriteLine($"Generating {_generalOptions.UnsortedFileName} file, " +

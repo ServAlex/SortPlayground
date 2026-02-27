@@ -18,10 +18,11 @@ public class LeftoversRemover
 	public void Remove()
 	{
 		var chunksDirectoryPath = Path.Combine(GeneralOptions.FilesLocation, GeneralOptions.ChunksDirectoryBaseName);
-		if ((!GeneralOptions.KeepChunks || GeneralOptions.DeleteAllCreatedFiles) && Directory.Exists(chunksDirectoryPath))
+		if ((!GeneralOptions.KeepChunks || GeneralOptions.DeleteAllCreatedFiles) 
+		    && FileSystem.DirectoryExists(chunksDirectoryPath))
 		{
 			Console.WriteLine($"Deleted chunks directory at {chunksDirectoryPath}");
-			Directory.Delete(chunksDirectoryPath, true);
+			FileSystem.DeleteDirectory(chunksDirectoryPath, true);
 		}
 		
 		if (!GeneralOptions.DeleteAllCreatedFiles)
@@ -33,14 +34,14 @@ public class LeftoversRemover
 		if (FileSystem.FileExists(unsortedFilePath))
 		{
 			Console.WriteLine($"Deleted unsorted file at {unsortedFilePath}");
-			File.Delete(unsortedFilePath);
+			FileSystem.DeleteFile(unsortedFilePath);
 		}
 			
 		var sortedFilePath = Path.Combine(GeneralOptions.FilesLocation, GeneralOptions.SortedFileName);
 		if (FileSystem.FileExists(sortedFilePath))
 		{
 			Console.WriteLine($"Deleted sorted file at {sortedFilePath}");
-			File.Delete(sortedFilePath);
+			FileSystem.DeleteFile(sortedFilePath);
 		}
 	}
 }

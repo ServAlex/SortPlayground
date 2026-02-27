@@ -103,15 +103,15 @@ public class SortedFilesMerger(
 		return finalMergeTask.Result;
 	}
 
-	private static FileInfo[] ValidatedChunkFiles(string chunksDirectoryPath)
+	private FileInfo[] ValidatedChunkFiles(string chunksDirectoryPath)
 	{
-		if (!Directory.Exists(chunksDirectoryPath))
+		if(!fileSystem.DirectoryExists(chunksDirectoryPath))
 		{
 			throw new FileNotFoundException($"Chunks directory '{chunksDirectoryPath}' does not exist. " +
 			                                $"Nothing to merge.");
 		}
-		
-		var files = new DirectoryInfo(chunksDirectoryPath).GetFiles();
+
+		var files = fileSystem.GetFiles(chunksDirectoryPath);
 		if (files.Length == 0)
 		{
 			throw new FileNotFoundException($"No chunk files found in '{chunksDirectoryPath}'. Nothing to merge.");
@@ -146,17 +146,9 @@ public class SortedFilesMerger(
 		}
 		Console.WriteLine(sb.ToString());
 		
-		var readers = files.Select(f =>
-			new StreamReader(
-				f.FullName,
-				Encoding.UTF8,
-				true,
-				new FileStreamOptions
-				{
-					BufferSize = readerBufferSize,
-					Options = FileOptions.SequentialScan
-				})
-		).ToArray();
+		var readers = files
+			.Select(f => fileSystem.GetFileReader(f.FullName, readerBufferSize))
+			.ToArray();
 		
 		var pq = new PriorityQueue<MergeItem, MergeKey>();
 		var lineEndLength = Environment.NewLine.Length;
@@ -219,15 +211,7 @@ public class SortedFilesMerger(
 		sb.AppendLine();
 		Console.WriteLine(sb);
 
-		await using var writer = new StreamWriter(
-			fileName,
-			Encoding.UTF8, 
-			new FileStreamOptions
-			{
-				BufferSize = writerBufferSize, 
-				Mode = FileMode.Create, 
-				Access = FileAccess.Write,
-			});	
+		await using var writer = fileSystem.GetFileWriter(fileName, writerBufferSize);
 		
 		var priorityQueue = new PriorityQueue<MergeItem, MergeKey>();
 		var batches = new MergeBatch[intermediateResultsChannels.Length];
