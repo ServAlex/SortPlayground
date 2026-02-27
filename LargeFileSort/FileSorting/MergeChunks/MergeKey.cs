@@ -24,6 +24,9 @@ internal readonly struct MergeKey : IComparable<MergeKey>
 		
 		if (comparison != 0) 
 			return comparison;
+
+		if (_textLength != other._textLength)
+			return _textLength - other._textLength;
 		
 		return _number.CompareTo(other._number);
 
