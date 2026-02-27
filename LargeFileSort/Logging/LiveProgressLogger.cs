@@ -55,23 +55,23 @@ public class LiveProgressLogger(IOptions<GeneralOptions> generalOptions)
 				StringBuilderWriteAndReset(sb, ref linesLogged);
 			}
 
-			sb.Append($"   Written:   {BytesWritten/1024/1024,6:N0} MB");
+			sb.Append($"   Written:   {BytesWritten/1024/1024,7:N0} MB");
 			StringBuilderWriteAndReset(sb, ref linesLogged);
 
 			var newTime = DateTime.Now;
-			sb.Append($"   R/W speed: {(BytesRead-lastBytesRead)/(newTime - lastUpdateTime).TotalSeconds/1024/1024,6:N1} MB/s");
-			sb.Append($"  / {(BytesWritten-lastBytesWritten)/(newTime - lastUpdateTime).TotalSeconds/1024/1024,6:N1} MB/s");
+			sb.Append($"   R/W speed: {(BytesRead-lastBytesRead)/(newTime - lastUpdateTime).TotalSeconds/1024/1024,7:N1} MB/s");
+			sb.Append($"  / {(BytesWritten-lastBytesWritten)/(newTime - lastUpdateTime).TotalSeconds/1024/1024,7:N1} MB/s");
 			lastUpdateTime = newTime;
 			lastBytesWritten = BytesWritten;
 			lastBytesRead = BytesRead;
 			StringBuilderWriteAndReset(sb, ref linesLogged);
 
 			var secondsPassed = (newTime - StartTime).TotalSeconds;
-			sb.Append($"   Avg R/W:   {BytesRead/secondsPassed/1024/1024,6:N1} MB/s");
-			sb.Append($"  / {BytesWritten/secondsPassed/1024/1024,6:N1} MB/s");
+			sb.Append($"   Avg R/W:   {BytesRead/secondsPassed/1024/1024,7:N1} MB/s");
+			sb.Append($"  / {BytesWritten/secondsPassed/1024/1024,7:N1} MB/s");
 			StringBuilderWriteAndReset(sb, ref linesLogged);
 
-			sb.Append($"   Time:       {secondsPassed,5:F1} s");
+			sb.Append($"   Time:       {secondsPassed,6:F1} s");
 			StringBuilderWriteAndReset(sb, ref linesLogged);
 
 			var workingSetGb = Process.GetCurrentProcess().WorkingSet64 / 1024d / 1024 / 1024;

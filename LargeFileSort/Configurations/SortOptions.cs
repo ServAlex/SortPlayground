@@ -19,7 +19,7 @@ public sealed class SortOptions
 	public required int BaseChunkSizeMb { get; set; }
 	
 	[Required]
-	[Range(1, 10)]
+	[Range(1, 100)]
 	public required int QueueLength { get; set; }
 	
 	[Required]
