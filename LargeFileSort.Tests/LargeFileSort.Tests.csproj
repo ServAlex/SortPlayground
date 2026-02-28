@@ -20,7 +20,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Fakes\" />
       <Folder Include="Unit\" />
     </ItemGroup>
 

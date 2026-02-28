@@ -1,5 +1,5 @@
 using LargeFileSort.Configurations;
-using Microsoft.Extensions.Configuration;
+using LargeFileSort.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LargeFileSort.Tests.Integration;
@@ -26,30 +26,15 @@ public class EndToEndTests : IDisposable
 		var builder = Program.CreateAppBuilder([]);
 
 		builder.Configuration.Sources.Clear();
-		builder.Configuration.AddInMemoryCollection(
-			new Dictionary<string, string?>
-			{
-				["FileGenerationOptions:Enabled"] = "true",
-				["FileGenerationOptions:FileSizeGb"] = "1",
 
-				["SortOptions:Enabled"] = "true",
-				["SortOptions:ReuseChunks"] = "false",
-				["SortOptions:IntermediateFileSizeMaxMb"] = "128",
-				["SortOptions:BaseChunkSizeMb"] = "16",
-				["SortOptions:QueueLength"] = "4",
-				["SortOptions:SortWorkerCount"] = "4",
-				["SortOptions:MergeWorkerCount"] = "2",
-				["SortOptions:MergeToFileWorkerCount"] = "1",
-				["SortOptions:BufferSizeMb"] = "1",
+		builder.Services.AddSingleton(
+			TestOptionsFactory.FileGeneration(o => o.Enabled = true));
 
-				["GeneralOptions:DeleteAllCreatedFiles"] = "false",
-				["GeneralOptions:UnsortedFileName"] = "unsorted.txt",
-				["GeneralOptions:SortedFileName"] = outputFileName,
-				["GeneralOptions:FilesLocation"] = _tempDir,
-				["GeneralOptions:ChunksDirectoryBaseName"] = "Chunks",
-				["GeneralOptions:MemoryBudgetGb"] = "4",
-				["GeneralOptions:KeepChunks"] = "true",
-			});
+		builder.Services.AddSingleton(
+			TestOptionsFactory.Sort(o => o.Enabled = true));
+
+		builder.Services.AddSingleton(
+			TestOptionsFactory.General(_tempDir, o => { o.SortedFileName = outputFileName; }));
 
 		var host = builder.Build();
 

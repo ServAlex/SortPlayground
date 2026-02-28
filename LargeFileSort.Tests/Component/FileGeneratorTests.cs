@@ -1,11 +1,11 @@
 using LargeFileSort.Common;
-using LargeFileSort.Configurations;
 using LargeFileSort.FileDeletion;
 using LargeFileSort.FileGeneration;
 using LargeFileSort.FileSorting.ChunkInputFile;
 using LargeFileSort.FileSorting.MergeChunks;
 using LargeFileSort.Infrastructure;
 using LargeFileSort.Logging;
+using LargeFileSort.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 
@@ -22,32 +22,14 @@ public class FileGeneratorTests
 
 		services.AddSingleton(fileSystemMock);
 		
-		// Register real services
 		services.AddSingleton<FileGenerator>();
-		//services.AddSingleton<FileSorter>();
 		services.AddSingleton<FileChunker>();
 		services.AddSingleton<SortedFilesMerger>();
 		services.AddSingleton<LeftoversRemover>();
 		services.AddSingleton<LiveProgressLogger>();
-
-		// Add configuration if needed
-		services.Configure<FileGenerationOptions>(options =>
-		{
-			options.Enabled = true;
-			options.Reuse = true;
-			options.FileSizeGb = 10;
-		});
 		
-		services.Configure<GeneralOptions>(options =>
-		{
-			options.FilesLocation = "";
-			options.UnsortedFileName = "unsorted.txt";
-			options.SortedFileName = "sorted.txt";
-			options.ChunksDirectoryBaseName = "chunks";
-			options.DeleteAllCreatedFiles = true;
-			options.KeepChunks = false;
-			options.MemoryBudgetGb = 10;
-		});
+		services.AddSingleton(TestOptionsFactory.FileGeneration(o => o.Enabled = true));
+		services.AddSingleton(TestOptionsFactory.General(""));
 
 		var provider = services.BuildServiceProvider();
 		var generator = provider.GetRequiredService<FileGenerator>();
