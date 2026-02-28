@@ -1,21 +1,34 @@
 
 # Large file sort
 
-How to run:
 
-`dotnet run -c Release --generate true --sizeGb 10 --path ../SortTemp --sort true`
+## All in one - generate random file and sort:
+```
+cd LargeFileSort
+dotnet run -c Release --generate true --sizeGb 10 --path ../SortTemp --sort true
+```
+### Only generate random file:
+```
+dotnet run -c Release --generate true --sizeGb 10 --path ../SortTemp
+```
+### Only sort:
+```
+dotnet run -c Release --sort true --path ../SortTemp
+```
 
-Run and delete all the created files afterward:
 
-`dotnet run -c Release --generate true --sizeGb 10 --path ../SortTemp --sort true --delete true`
+## Delete files created by the previous run:
+```
+dotnet run -c Release --delete true --path ../SortTemp
+```
 
-Delete files created by the previous run:
-
-`dotnet run -c Release --delete true --path ../SortTemp`
+## Note: 
+Running as `dotnet run -c Release` is significantly more performant than
+running in Release mode in Rider, around 30% faster.
 
 ---
 
-Available Options:
+## Available Options:
 
 ```
 --generate            - bool, generate the random file, default: false

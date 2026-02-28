@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using LargeFileSort.Common;
 using LargeFileSort.Configurations;
 using LargeFileSort.Infrastructure;
 using LargeFileSort.Logging;
@@ -58,18 +59,18 @@ public class FileGenerator
 			Console.WriteLine("Generation is not enabled in options, skipping");
 			return;
 		}
-		
-		if (!Directory.Exists(_generalOptions.FilesLocation))
+
+		if (!_fileSystem.DirectoryExists(_generalOptions.FilesLocation))
 		{
-			Directory.CreateDirectory(_generalOptions.FilesLocation);
+			_fileSystem.CreateDirectory(_generalOptions.FilesLocation);
 		}
 		
 		var filePath = Path.Combine(_generalOptions.FilesLocation, _generalOptions.UnsortedFileName);
 		var desiredFileSize = (long)_fileGenerationOptions.FileSizeGb * 1024 * 1024 * 1024;
 
 		if (_fileGenerationOptions.Reuse 
-		    && File.Exists(filePath) 
-		    && (double)Math.Abs(new FileInfo(filePath).Length - desiredFileSize) / desiredFileSize < 0.01)
+		    && _fileSystem.FileExists(filePath) 
+		    && (double)Math.Abs(_fileSystem.GetFileSize(filePath) - desiredFileSize) / desiredFileSize < 0.01)
 		{
 			Console.WriteLine($"File {_generalOptions.UnsortedFileName} already exists, " +
 			                  $"it's size is within 1% of desired, reusing it");
@@ -78,20 +79,11 @@ public class FileGenerator
 		
 		if (!_fileSystem.HasEnoughFreeSpace(_generalOptions.FilesLocation, desiredFileSize))
 		{
-			throw new IOException($"Not enough free space on disk to create {_generalOptions.UnsortedFileName} file, " +
-			                      $"you may reduce --sizeGb in options - generate smaller input file, " +
-			                      $"keep in mind sort will require 2 times more free space than this file size");
+			throw new InsufficientFreeDiskException($"Not enough free space on disk to " +
+			                                        $"create {_generalOptions.UnsortedFileName} file");
 		}
-		
-		using var writer = new StreamWriter(
-			filePath,
-			Encoding.UTF8, 
-			new FileStreamOptions
-			{
-				BufferSize = 1 << 22, 
-				Mode = FileMode.Create, 
-				Access = FileAccess.Write
-			});
+
+		using var writer = _fileSystem.GetFileWriter(filePath, 4 * 1024 * 1024);
 		
 		var sw = Stopwatch.StartNew();
 		Console.WriteLine($"Generating {_generalOptions.UnsortedFileName} file, " +

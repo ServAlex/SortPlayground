@@ -1,6 +1,6 @@
 using System.Diagnostics;
-using System.Text;
 using System.Threading.Channels;
+using LargeFileSort.Common;
 using LargeFileSort.Configurations;
 using LargeFileSort.Infrastructure;
 using LargeFileSort.Logging;
@@ -128,9 +128,9 @@ public class FileChunker
 
 	private bool ShouldContinue()
 	{
-		_inputFileSize = File.Exists(_unsortedFilePath) ? new FileInfo(_unsortedFilePath).Length : 0;
+		_inputFileSize = _fileSystem.FileExists(_unsortedFilePath) ? _fileSystem.GetFileSize(_unsortedFilePath) : 0;
 		
-		if (Directory.Exists(_chunkDirectoryPath) && _sortOptions.ReuseChunks)
+		if (_fileSystem.DirectoryExists(_chunkDirectoryPath) && _sortOptions.ReuseChunks)
 		{
 			Console.WriteLine($"Reusing chunks from {_chunkDirectoryPath}");
 			Console.WriteLine();
@@ -150,22 +150,21 @@ public class FileChunker
 		var gcInfo = GC.GetGCMemoryInfo();
 		if (_memoryBudgetGb > (gcInfo.TotalAvailableMemoryBytes - gcInfo.MemoryLoadBytes) / 1024d / 1024 / 1024)
 		{
-			throw new IOException($"Not enough free RAM to create chunks directory {_chunkDirectoryPath}, " +
-			                      $"you may reduce --memoryBudgetGb and maybe --chunkFileSizeMb in options.");
+			throw new InsufficientFreeMemoryException("Not enough free RAM");
 		}
 
-		if (Directory.Exists(_chunkDirectoryPath))
+		if (_fileSystem.DirectoryExists(_chunkDirectoryPath))
 		{
-			Directory.Delete(_chunkDirectoryPath, true);
+			_fileSystem.DeleteDirectory(_chunkDirectoryPath, true);
 		}
 		
 		if (!_fileSystem.HasEnoughFreeSpace(_chunkDirectoryPath, _inputFileSize))
 		{
-			throw new IOException($"Not enough free space on disk to create chunks directory {_chunkDirectoryPath}, " +
-			                      $"you may reduce --sizeGb in options - generate smaller input file.");
+			throw new InsufficientFreeDiskException($"Not enough free space on disk to create " +
+			                                        $"chunks directory {_chunkDirectoryPath}");
 		}
 		
-		Directory.CreateDirectory(_chunkDirectoryPath);
+		_fileSystem.CreateDirectory(_chunkDirectoryPath);
 		return true;
 	}
 
@@ -173,15 +172,8 @@ public class FileChunker
 	{
 		_logger.LogSingleMessage($"Started reading {_unsortedFilePath}");
 
-		using var reader = new StreamReader(
-			_unsortedFilePath,
-			Encoding.UTF8,
-			true,
-			new FileStreamOptions
-			{
-				BufferSize = _sortOptions.BufferSizeMb * 1024 * 1024,
-				Options = FileOptions.SequentialScan
-			});
+		using var reader = _fileSystem.GetFileReader(
+			_unsortedFilePath, _sortOptions.BufferSizeMb * 1024 * 1024);
 		
 		var chunk = new UnsortedChunk(_baseChunkSize);
 		bool isReadToEnd;
@@ -332,15 +324,7 @@ public class FileChunker
 			}
 
 			var path = Path.Combine(_chunkDirectoryPath, filename);
-			await using var writer = new StreamWriter(
-				path,
-				Encoding.UTF8, 
-				new FileStreamOptions
-				{
-					BufferSize = _sortOptions.BufferSizeMb * 1024 * 1024,
-					Mode = FileMode.Create, 
-					Access = FileAccess.Write
-				});
+			await using var writer = _fileSystem.GetFileWriter(path, _sortOptions.BufferSizeMb * 1024 * 1024);
 		
 			if (chunkB is not null)
 			{
