@@ -47,7 +47,7 @@ public static class TestOptionsFactory
 			SortedFileName = "sorted.txt",
 			FilesLocation = tempDir,
 			ChunksDirectoryBaseName = "Chunks",
-			MemoryBudgetGb = 4,
+			MemoryBudget = DataSize.Parse("16gb"),
 			KeepChunks = false
 		};
 

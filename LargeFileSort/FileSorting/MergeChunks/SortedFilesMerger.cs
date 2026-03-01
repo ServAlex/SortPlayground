@@ -47,7 +47,7 @@ public class SortedFilesMerger(
 		const int empiricalConstant = 600;
 		var intermediateChannelCapacity = (int)Math.Min(
 			100, 
-			(long)_generalOptions.MemoryBudgetGb*1024*1024*1024/batchSize/intermediateMergeThreads/empiricalConstant);
+			_generalOptions.MemoryBudget/batchSize/intermediateMergeThreads/empiricalConstant);
 		
 		var intermediateChannels = Enumerable
 			.Range(0, intermediateMergeThreads)

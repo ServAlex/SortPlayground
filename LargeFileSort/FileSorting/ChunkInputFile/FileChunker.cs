@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Threading.Channels;
 using LargeFileSort.Common;
 using LargeFileSort.Configurations;
+using LargeFileSort.Domain;
 using LargeFileSort.Infrastructure;
 using LargeFileSort.Logging;
 using Microsoft.Extensions.Options;
@@ -13,7 +14,7 @@ public class FileChunker
 	private readonly int _sortWorkerCount;
 	private readonly int _baseChunkSize;
 	
-	private readonly int _memoryBudgetGb;
+	private readonly DataSize _memoryBudget;
 	private readonly string _unsortedFilePath;
 	private readonly string _chunkDirectoryPath;
 	
@@ -53,7 +54,7 @@ public class FileChunker
 		_sortedChunks = new SortedChunk?[_maxRank + 1];
 		
 		var generalOptionsValue = generalOptions.Value;
-		_memoryBudgetGb = generalOptionsValue.MemoryBudgetGb;
+		_memoryBudget = generalOptionsValue.MemoryBudget;
 		_unsortedFilePath = Path.Combine(generalOptionsValue.FilesLocation, generalOptionsValue.UnsortedFileName);
 		_chunkDirectoryPath = Path.Combine(
 			generalOptionsValue.FilesLocation, 
@@ -148,7 +149,7 @@ public class FileChunker
 		}
 		
 		var gcInfo = GC.GetGCMemoryInfo();
-		if (_memoryBudgetGb > (gcInfo.TotalAvailableMemoryBytes - gcInfo.MemoryLoadBytes) / 1024d / 1024 / 1024)
+		if (_memoryBudget > gcInfo.TotalAvailableMemoryBytes - gcInfo.MemoryLoadBytes)
 		{
 			throw new InsufficientFreeMemoryException("Not enough free RAM");
 		}
@@ -208,7 +209,7 @@ public class FileChunker
 			chunk = newChunk;
 
 			var usedMemory = GC.GetTotalMemory(true);
-			while ((float)usedMemory / 1024 / 1024 / 1024 > _memoryBudgetGb * 0.85)
+			while (usedMemory  > _memoryBudget * 0.85)
 			{
 				_logger.LogSingleMessage($"approaching memory budget, holding new chunk for 1 sec");
 				await Task.Delay(1000);

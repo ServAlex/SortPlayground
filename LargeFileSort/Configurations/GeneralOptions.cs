@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using LargeFileSort.Domain;
 
 namespace LargeFileSort.Configurations;
 
@@ -17,10 +18,8 @@ public sealed class GeneralOptions
 	
 	[Required]
 	public required string ChunksDirectoryBaseName { get; set; }
-	
-	[Required]
-	[Range(2, 128)]
-	public required int MemoryBudgetGb { get; set; }
+
+	public DataSize MemoryBudget { get; set; } = null!;
 	
 	[Required]
 	public required bool KeepChunks { get; set; }

@@ -78,7 +78,7 @@ public class LiveProgressLogger(IOptions<GeneralOptions> generalOptions)
 			var gcInfo = GC.GetGCMemoryInfo();
 			var memoryLoad = gcInfo.MemoryLoadBytes / 1024d / 1024 / 1024;
 			var totalSystemMemoryGb = gcInfo.TotalAvailableMemoryBytes / 1024d / 1024 / 1024;
-			sb.Append($"   RAM budget:{workingSetGb,5:F1} / {_generalOptions.MemoryBudgetGb:F1} GB");
+			sb.Append($"   RAM budget:{workingSetGb,5:F1} / {_generalOptions.MemoryBudget.ToDataSizeString("GB"):F1}");
 			sb.Append($"    System memory load: {memoryLoad,5:F1} GB");
 			sb.Append($"    Total RAM: {totalSystemMemoryGb,5:F1} GB");
 			sb.Append($"    Pause: {gcInfo.PauseTimePercentage,5:F1}%");
