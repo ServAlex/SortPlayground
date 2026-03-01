@@ -1,4 +1,5 @@
 using LargeFileSort.Configurations;
+using LargeFileSort.Domain;
 using Microsoft.Extensions.Options;
 
 namespace LargeFileSort.Tests.Helpers;
@@ -11,7 +12,7 @@ public static class TestOptionsFactory
 		{
 			Enabled = false,
 			Reuse = false,
-			FileSizeGb = 1
+			FileSize = DataSize.Parse("512mb")
 		};
 
 		configure?.Invoke(options);

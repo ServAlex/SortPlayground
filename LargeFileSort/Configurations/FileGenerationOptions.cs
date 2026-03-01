@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using LargeFileSort.Domain;
 
 namespace LargeFileSort.Configurations;
 
@@ -10,7 +11,5 @@ public sealed class FileGenerationOptions
 	[Required]
 	public required bool Reuse { get; set; }
 	
-	[Required]
-	[Range(1, 100)]
-	public required int FileSizeGb { get; set; }
+	public DataSize FileSize { get; set; } = null!;
 }

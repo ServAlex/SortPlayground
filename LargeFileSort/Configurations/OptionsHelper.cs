@@ -35,7 +35,7 @@ public static class OptionsHelper
 		{
 			{ "--generate", $"{nameof(FileGenerationOptions)}:{nameof(FileGenerationOptions.Enabled)}" },
 			{ "--reuseUnsorted", $"{nameof(FileGenerationOptions)}:{nameof(FileGenerationOptions.Reuse)}" },
-			{ "--sizeGb", $"{nameof(FileGenerationOptions)}:{nameof(FileGenerationOptions.FileSizeGb)}" },
+			{ "--fileSize", $"{nameof(FileGenerationOptions)}:{nameof(FileGenerationOptions.FileSize)}" },
 	
 			{ "--sort", $"{nameof(SortOptions)}:{nameof(SortOptions.Enabled)}" },
 			{ "--reuseChunks", $"{nameof(SortOptions)}:{nameof(SortOptions.ReuseChunks)}" },
