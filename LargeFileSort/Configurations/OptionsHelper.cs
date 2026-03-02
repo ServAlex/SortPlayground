@@ -59,24 +59,27 @@ public static class OptionsHelper
 		// 	sb.AppendLine($"  {key}");
 		// }
 		sb.AppendLine();
-		sb.AppendLine("  --generate            - bool,	generate the random file, default: false");
-		sb.AppendLine("  --reuseUnsorted       - bool,	reuse random file at path if size matches, default: true");
-		sb.AppendLine("  --fileSize            - size,		file size to be generated, (Ex: 512mb, 1gb), default: 10gb");
+		sb.AppendLine("  --generate         - bool,   generate the random file, default: false");
+		sb.AppendLine("  --reuseUnsorted    - bool,   reuse random file at path if size matches, default: true");
+		sb.AppendLine("  --fileSize         - size,   file size to be generated, (Ex: 512mb, 1gb), default: 10gb");
 		sb.AppendLine();
-		sb.AppendLine("  --sort                - bool,	sort unsorted file, default: false");
-		sb.AppendLine("  --reuseChunks         - bool,	reuse partially sorted chunks if exist, default: false");
-		sb.AppendLine("  --chunkFileSize       - size,	default: 1024mb");
-		sb.AppendLine("  --readChunkSize       - size,	size of chunk read and sorted directly, default: 32mb");
+		sb.AppendLine("  --sort             - bool,   sort unsorted file, default: false");
+		sb.AppendLine("  --reuseChunks      - bool,   reuse partially sorted chunks if exist, default: false");
+		sb.AppendLine("  --chunkFileSize    - size,   default: 1024mb");
+		sb.AppendLine("  --readChunkSize    - size,   size of chunk read and sorted directly, default: 32mb");
 		sb.AppendLine();
-		sb.AppendLine("  --path                - string, default: .");
-		sb.AppendLine("  --delete              - bool,	delete all created files, has priority over keepChunks, default: false");
-		sb.AppendLine("  --keepChunks          - bool,	keep chunks after run, default: true");
-		sb.AppendLine("  --memoryBudget		   - size,  default: 16gb");
+		sb.AppendLine("  --path             - string, default: ./SortArtifacts");
+		sb.AppendLine("  --delete           - bool,   delete all created files, has priority over keepChunks, default: false");
+		sb.AppendLine("  --keepChunks       - bool,   keep chunks after run, default: true");
+		sb.AppendLine("  --memoryBudget     - size,   default: 16gb");
 		sb.AppendLine();
-		sb.AppendLine("  Note: data size is expressed as a whole number or number with sufix kb|mb|gb, Ex: 1024, 1mb, 10gb");
-
+		
+		sb.AppendLine("Note: data size is expressed as a whole number or number with suffix kb|mb|gb, Ex: 1024, 1mb, 10gb");
 		sb.AppendLine();
-		sb.AppendLine("Example: dotnet run -c Release --generate true --sizeGb 10 --path ./SortTemp/ --sort true\n");
+		sb.AppendLine("Example:");
+		sb.AppendLine("        dotnet run -c Release --generate true --fileSize 10gb --path ./SortTemp --sort true");
+		sb.AppendLine();
+		
 		return sb.ToString();
 	}
 
