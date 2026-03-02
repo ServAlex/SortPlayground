@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using LargeFileSort.Domain;
 
 namespace LargeFileSort.Configurations;
 
@@ -9,10 +10,8 @@ public sealed class SortOptions
 	
 	[Required]
 	public required bool ReuseChunks { get; set; }
-	
-	[Required]
-	[Range(128, 4095)]
-	public required int IntermediateFileSizeMaxMb { get; set; }
+
+	public DataSize ChunkFileSizeMax { get; set; } = null!;
 	
 	[Required]
 	[Range(1, 2047)]

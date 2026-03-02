@@ -25,7 +25,7 @@ public static class TestOptionsFactory
 		{
 			Enabled = false,
 			ReuseChunks = false,
-			IntermediateFileSizeMaxMb = 128,
+			ChunkFileSizeMax = DataSize.Parse("128mb"),
 			BaseChunkSizeMb = 16,
 			QueueLength = 4,
 			SortWorkerCount = 4,

@@ -39,7 +39,7 @@ public static class OptionsHelper
 	
 			{ "--sort", $"{nameof(SortOptions)}:{nameof(SortOptions.Enabled)}" },
 			{ "--reuseChunks", $"{nameof(SortOptions)}:{nameof(SortOptions.ReuseChunks)}" },
-			{ "--chunkFileSizeMb", $"{nameof(SortOptions)}:{nameof(SortOptions.IntermediateFileSizeMaxMb)}" },
+			{ "--chunkFileSize", $"{nameof(SortOptions)}:{nameof(SortOptions.ChunkFileSizeMax)}" },
 			{ "--baseChunkSizeMb", $"{nameof(SortOptions)}:{nameof(SortOptions.BaseChunkSizeMb)}" },
 	
 			{ "--path", $"{nameof(GeneralOptions)}:{nameof(GeneralOptions.FilesLocation)}" },
@@ -65,7 +65,7 @@ public static class OptionsHelper
 		sb.AppendLine();
 		sb.AppendLine("  --sort                - bool,	sort unsorted file, default: false");
 		sb.AppendLine("  --reuseChunks         - bool,	reuse partially sorted chunks if exist, default: false");
-		sb.AppendLine("  --chunkFileSizeMb     - int,	default: 1024");
+		sb.AppendLine("  --chunkFileSize       - size,	default: 1024mb");
 		sb.AppendLine("  --baseChunkSizeMb     - int,	size of chunk sorted directly, default: 32");
 		sb.AppendLine();
 		sb.AppendLine("  --path                - string, default: .");
