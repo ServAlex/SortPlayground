@@ -26,7 +26,7 @@ public static class TestOptionsFactory
 			Enabled = false,
 			ReuseChunks = false,
 			ChunkFileSizeMax = DataSize.Parse("128mb"),
-			BaseChunkSizeMb = 16,
+			ReadChunkSize = DataSize.Parse("16mb"),
 			QueueLength = 4,
 			SortWorkerCount = 4,
 			MergeWorkerCount = 2,

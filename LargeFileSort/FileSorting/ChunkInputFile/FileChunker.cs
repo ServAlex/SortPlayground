@@ -12,7 +12,7 @@ namespace LargeFileSort.FileSorting.ChunkInputFile;
 public class FileChunker
 {
 	private readonly int _sortWorkerCount;
-	private readonly int _baseChunkSize;
+	private readonly int _readChunkSize;
 	
 	private readonly DataSize _memoryBudget;
 	private readonly string _unsortedFilePath;
@@ -48,9 +48,9 @@ public class FileChunker
 		                   - _sortOptions.MergeToFileWorkerCount 
 		                   - _sortOptions.MergeWorkerCount 
 		                   - 1;
-		_baseChunkSize = _sortOptions.BaseChunkSizeMb * 1024 * 1024;
+		_readChunkSize = checked((int)_sortOptions.ReadChunkSize);
 		
-		_maxRank = MaxRank((long)(_sortOptions.ChunkFileSizeMax/2.0), _baseChunkSize);
+		_maxRank = MaxRank((long)(_sortOptions.ChunkFileSizeMax/2.0), _readChunkSize);
 		_sortedChunks = new SortedChunk?[_maxRank + 1];
 		
 		var generalOptionsValue = generalOptions.Value;
@@ -176,7 +176,7 @@ public class FileChunker
 		using var reader = _fileSystem.GetFileReader(
 			_unsortedFilePath, _sortOptions.BufferSizeMb * 1024 * 1024);
 		
-		var chunk = new UnsortedChunk(_baseChunkSize);
+		var chunk = new UnsortedChunk(_readChunkSize);
 		bool isReadToEnd;
 
 		do
@@ -200,10 +200,10 @@ public class FileChunker
 			}
 				
 			// init a new chunk with the end of the previous one and set offset
-			var newChunk = new UnsortedChunk(_baseChunkSize);
-			if (chunk.FilledLength < _baseChunkSize)
+			var newChunk = new UnsortedChunk(_readChunkSize);
+			if (chunk.FilledLength < _readChunkSize)
 			{
-				newChunk.StartOffset = _baseChunkSize - chunk.FilledLength;
+				newChunk.StartOffset = _readChunkSize - chunk.FilledLength;
 				chunk.Span[(lineEndIndex+1)..].CopyTo(newChunk.Span[..newChunk.StartOffset]);
 			}
 			chunk = newChunk;

@@ -12,10 +12,9 @@ public sealed class SortOptions
 	public required bool ReuseChunks { get; set; }
 
 	public DataSize ChunkFileSizeMax { get; set; } = null!;
-	
-	[Required]
-	[Range(1, 2047)]
-	public required int BaseChunkSizeMb { get; set; }
+
+	//todo: add validation that is less than int max or accept long in chunks
+	public DataSize ReadChunkSize { get; set; } = null!;
 	
 	[Required]
 	[Range(1, 100)]

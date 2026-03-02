@@ -40,7 +40,7 @@ public static class OptionsHelper
 			{ "--sort", $"{nameof(SortOptions)}:{nameof(SortOptions.Enabled)}" },
 			{ "--reuseChunks", $"{nameof(SortOptions)}:{nameof(SortOptions.ReuseChunks)}" },
 			{ "--chunkFileSize", $"{nameof(SortOptions)}:{nameof(SortOptions.ChunkFileSizeMax)}" },
-			{ "--baseChunkSizeMb", $"{nameof(SortOptions)}:{nameof(SortOptions.BaseChunkSizeMb)}" },
+			{ "--readChunkSize", $"{nameof(SortOptions)}:{nameof(SortOptions.ReadChunkSize)}" },
 	
 			{ "--path", $"{nameof(GeneralOptions)}:{nameof(GeneralOptions.FilesLocation)}" },
 			{ "--delete", $"{nameof(GeneralOptions)}:{nameof(GeneralOptions.DeleteAllCreatedFiles)}" },
@@ -66,7 +66,7 @@ public static class OptionsHelper
 		sb.AppendLine("  --sort                - bool,	sort unsorted file, default: false");
 		sb.AppendLine("  --reuseChunks         - bool,	reuse partially sorted chunks if exist, default: false");
 		sb.AppendLine("  --chunkFileSize       - size,	default: 1024mb");
-		sb.AppendLine("  --baseChunkSizeMb     - int,	size of chunk sorted directly, default: 32");
+		sb.AppendLine("  --readChunkSize       - size,	size of chunk read and sorted directly, default: 32mb");
 		sb.AppendLine();
 		sb.AppendLine("  --path                - string, default: .");
 		sb.AppendLine("  --delete              - bool,	delete all created files, has priority over keepChunks, default: false");
