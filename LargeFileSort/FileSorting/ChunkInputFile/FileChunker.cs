@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Threading.Channels;
 using LargeFileSort.Common;
 using LargeFileSort.Configurations;
+using LargeFileSort.Domain;
 using LargeFileSort.Infrastructure;
 using LargeFileSort.Logging;
 using Microsoft.Extensions.Options;
@@ -11,9 +12,9 @@ namespace LargeFileSort.FileSorting.ChunkInputFile;
 public class FileChunker
 {
 	private readonly int _sortWorkerCount;
-	private readonly int _baseChunkSize;
+	private readonly int _readChunkSize;
 	
-	private readonly int _memoryBudgetGb;
+	private readonly DataSize _memoryBudget;
 	private readonly string _unsortedFilePath;
 	private readonly string _chunkDirectoryPath;
 	
@@ -47,13 +48,13 @@ public class FileChunker
 		                   - _sortOptions.MergeToFileWorkerCount 
 		                   - _sortOptions.MergeWorkerCount 
 		                   - 1;
-		_baseChunkSize = _sortOptions.BaseChunkSizeMb * 1024 * 1024;
+		_readChunkSize = checked((int)_sortOptions.ReadChunkSize);
 		
-		_maxRank = MaxRank((int)(_sortOptions.IntermediateFileSizeMaxMb/2.0 * 1024 * 1024), _baseChunkSize);
+		_maxRank = MaxRank((long)(_sortOptions.ChunkFileSizeMax/2.0), _readChunkSize);
 		_sortedChunks = new SortedChunk?[_maxRank + 1];
 		
 		var generalOptionsValue = generalOptions.Value;
-		_memoryBudgetGb = generalOptionsValue.MemoryBudgetGb;
+		_memoryBudget = generalOptionsValue.MemoryBudget;
 		_unsortedFilePath = Path.Combine(generalOptionsValue.FilesLocation, generalOptionsValue.UnsortedFileName);
 		_chunkDirectoryPath = Path.Combine(
 			generalOptionsValue.FilesLocation, 
@@ -148,7 +149,7 @@ public class FileChunker
 		}
 		
 		var gcInfo = GC.GetGCMemoryInfo();
-		if (_memoryBudgetGb > (gcInfo.TotalAvailableMemoryBytes - gcInfo.MemoryLoadBytes) / 1024d / 1024 / 1024)
+		if (_memoryBudget > gcInfo.TotalAvailableMemoryBytes - gcInfo.MemoryLoadBytes)
 		{
 			throw new InsufficientFreeMemoryException("Not enough free RAM");
 		}
@@ -172,10 +173,9 @@ public class FileChunker
 	{
 		_logger.LogSingleMessage($"Started reading {_unsortedFilePath}");
 
-		using var reader = _fileSystem.GetFileReader(
-			_unsortedFilePath, _sortOptions.BufferSizeMb * 1024 * 1024);
+		using var reader = _fileSystem.GetFileReader(_unsortedFilePath, (int)_sortOptions.BufferSize);
 		
-		var chunk = new UnsortedChunk(_baseChunkSize);
+		var chunk = new UnsortedChunk(_readChunkSize);
 		bool isReadToEnd;
 
 		do
@@ -199,16 +199,16 @@ public class FileChunker
 			}
 				
 			// init a new chunk with the end of the previous one and set offset
-			var newChunk = new UnsortedChunk(_baseChunkSize);
-			if (chunk.FilledLength < _baseChunkSize)
+			var newChunk = new UnsortedChunk(_readChunkSize);
+			if (chunk.FilledLength < _readChunkSize)
 			{
-				newChunk.StartOffset = _baseChunkSize - chunk.FilledLength;
+				newChunk.StartOffset = _readChunkSize - chunk.FilledLength;
 				chunk.Span[(lineEndIndex+1)..].CopyTo(newChunk.Span[..newChunk.StartOffset]);
 			}
 			chunk = newChunk;
 
 			var usedMemory = GC.GetTotalMemory(true);
-			while ((float)usedMemory / 1024 / 1024 / 1024 > _memoryBudgetGb * 0.85)
+			while (usedMemory  > _memoryBudget * 0.85)
 			{
 				_logger.LogSingleMessage($"approaching memory budget, holding new chunk for 1 sec");
 				await Task.Delay(1000);
@@ -324,7 +324,7 @@ public class FileChunker
 			}
 
 			var path = Path.Combine(_chunkDirectoryPath, filename);
-			await using var writer = _fileSystem.GetFileWriter(path, _sortOptions.BufferSizeMb * 1024 * 1024);
+			await using var writer = _fileSystem.GetFileWriter(path, (int)_sortOptions.BufferSize);
 		
 			if (chunkB is not null)
 			{
@@ -339,7 +339,7 @@ public class FileChunker
 		}
 	}
 
-	private static int MaxRank(int maxLength, int chunkSize)
+	private static int MaxRank(long maxLength, long chunkSize)
 	{
 		return (int)Math.Floor(Math.Log2((double)maxLength / chunkSize));
 	}

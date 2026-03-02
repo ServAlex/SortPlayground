@@ -35,17 +35,17 @@ public static class OptionsHelper
 		{
 			{ "--generate", $"{nameof(FileGenerationOptions)}:{nameof(FileGenerationOptions.Enabled)}" },
 			{ "--reuseUnsorted", $"{nameof(FileGenerationOptions)}:{nameof(FileGenerationOptions.Reuse)}" },
-			{ "--sizeGb", $"{nameof(FileGenerationOptions)}:{nameof(FileGenerationOptions.FileSizeGb)}" },
+			{ "--fileSize", $"{nameof(FileGenerationOptions)}:{nameof(FileGenerationOptions.FileSize)}" },
 	
 			{ "--sort", $"{nameof(SortOptions)}:{nameof(SortOptions.Enabled)}" },
 			{ "--reuseChunks", $"{nameof(SortOptions)}:{nameof(SortOptions.ReuseChunks)}" },
-			{ "--chunkFileSizeMb", $"{nameof(SortOptions)}:{nameof(SortOptions.IntermediateFileSizeMaxMb)}" },
-			{ "--baseChunkSizeMb", $"{nameof(SortOptions)}:{nameof(SortOptions.BaseChunkSizeMb)}" },
+			{ "--chunkFileSize", $"{nameof(SortOptions)}:{nameof(SortOptions.ChunkFileSizeMax)}" },
+			{ "--readChunkSize", $"{nameof(SortOptions)}:{nameof(SortOptions.ReadChunkSize)}" },
 	
 			{ "--path", $"{nameof(GeneralOptions)}:{nameof(GeneralOptions.FilesLocation)}" },
 			{ "--delete", $"{nameof(GeneralOptions)}:{nameof(GeneralOptions.DeleteAllCreatedFiles)}" },
 			{ "--keepChunks", $"{nameof(GeneralOptions)}:{nameof(GeneralOptions.KeepChunks)}" },
-			{ "--memoryBudgetGb", $"{nameof(GeneralOptions)}:{nameof(GeneralOptions.MemoryBudgetGb)}" },
+			{ "--memoryBudget", $"{nameof(GeneralOptions)}:{nameof(GeneralOptions.MemoryBudget)}" },
 		};
 	}
 	
@@ -58,23 +58,28 @@ public static class OptionsHelper
 		// {
 		// 	sb.AppendLine($"  {key}");
 		// }
-		sb.AppendLine("");
-		sb.AppendLine("  --generate            - bool,	generate the random file, default: false");
-		sb.AppendLine("  --reuseUnsorted       - bool,	reuse random file at path if size matches, default: true");
-		sb.AppendLine("  --sizeGb              - int,	size of the file to be generated, default: 10");
-		sb.AppendLine("");
-		sb.AppendLine("  --sort                - bool,	sort unsorted file, default: false");
-		sb.AppendLine("  --reuseChunks         - bool,	reuse partially sorted chunks if exist, default: false");
-		sb.AppendLine("  --chunkFileSizeMb     - int,	default: 1024");
-		sb.AppendLine("  --baseChunkSizeMb     - int,	size of chunk sorted directly, default: 63");
-		sb.AppendLine("");
-		sb.AppendLine("  --path                - string, default: .");
-		sb.AppendLine("  --delete              - bool,	delete all created files, has priority over keepChunks, default: false");
-		sb.AppendLine("  --keepChunks          - bool,	keep chunks after run, default: true");
-		sb.AppendLine("  --memoryBudgetGb      - int,	default: 16");
-
 		sb.AppendLine();
-		sb.AppendLine("Example: dotnet run -c Release --generate true --sizeGb 10 --path ./SortTemp/ --sort true\n");
+		sb.AppendLine("  --generate         - bool,   generate the random file, default: false");
+		sb.AppendLine("  --reuseUnsorted    - bool,   reuse random file at path if size matches, default: true");
+		sb.AppendLine("  --fileSize         - size,   file size to be generated, (Ex: 512mb, 1gb), default: 10gb");
+		sb.AppendLine();
+		sb.AppendLine("  --sort             - bool,   sort unsorted file, default: false");
+		sb.AppendLine("  --reuseChunks      - bool,   reuse partially sorted chunks if exist, default: false");
+		sb.AppendLine("  --chunkFileSize    - size,   default: 1024mb");
+		sb.AppendLine("  --readChunkSize    - size,   size of chunk read and sorted directly, default: 32mb");
+		sb.AppendLine();
+		sb.AppendLine("  --path             - string, default: ./SortArtifacts");
+		sb.AppendLine("  --delete           - bool,   delete all created files, has priority over keepChunks, default: false");
+		sb.AppendLine("  --keepChunks       - bool,   keep chunks after run, default: true");
+		sb.AppendLine("  --memoryBudget     - size,   default: 16gb");
+		sb.AppendLine();
+		
+		sb.AppendLine("Note: data size is expressed as a whole number or number with suffix kb|mb|gb, Ex: 1024, 1mb, 10gb");
+		sb.AppendLine();
+		sb.AppendLine("Example:");
+		sb.AppendLine("        dotnet run -c Release --generate true --fileSize 10gb --path ./SortTemp --sort true");
+		sb.AppendLine();
+		
 		return sb.ToString();
 	}
 

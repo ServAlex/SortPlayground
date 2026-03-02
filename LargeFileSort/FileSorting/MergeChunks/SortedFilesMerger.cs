@@ -47,7 +47,7 @@ public class SortedFilesMerger(
 		const int empiricalConstant = 600;
 		var intermediateChannelCapacity = (int)Math.Min(
 			100, 
-			(long)_generalOptions.MemoryBudgetGb*1024*1024*1024/batchSize/intermediateMergeThreads/empiricalConstant);
+			_generalOptions.MemoryBudget/batchSize/intermediateMergeThreads/empiricalConstant);
 		
 		var intermediateChannels = Enumerable
 			.Range(0, intermediateMergeThreads)
@@ -67,17 +67,15 @@ public class SortedFilesMerger(
 						MergeFiles(
 							files.Where((_, i) => i % intermediateMergeThreads == q).ToArray(),
 							intermediateChannels[q],
-							_sortOptions.BufferSizeMb * 1024 * 1024,
+							(int)_sortOptions.BufferSize,
 							batchSize,
 							q)
 					)
 				)
 		);
 		
-		var finalMergeTask = Task.Run(() => FinalMerge(
-			intermediateChannels, 
-			sortedFilePath, 
-			_sortOptions.BufferSizeMb * 1024 * 1024));
+		var finalMergeTask = Task.Run(() => 
+			FinalMerge(intermediateChannels, sortedFilePath, (int)_sortOptions.BufferSize));
 		tasks.Add(finalMergeTask);
 		
 		var loggerCancellationTokenSource = new CancellationTokenSource();

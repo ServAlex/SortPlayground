@@ -5,21 +5,21 @@
 ## All in one - generate random file and sort:
 ```
 cd LargeFileSort
-dotnet run -c Release --generate true --sizeGb 10 --path ../SortTemp --sort true
+dotnet run -c Release --generate true --fileSize 10gb --path ./SortTemp/ --sort true
 ```
 ### Only generate random file:
 ```
-dotnet run -c Release --generate true --sizeGb 10 --path ../SortTemp
+dotnet run -c Release --generate true --fileSize 10gb --path ./SortTemp
 ```
-### Only sort:
+### Only sort existing file:
 ```
-dotnet run -c Release --sort true --path ../SortTemp
+dotnet run -c Release --sort true --path ./SortTemp
 ```
 
 
 ## Delete files created by the previous run:
 ```
-dotnet run -c Release --delete true --path ../SortTemp
+dotnet run -c Release --delete true --path ./SortTemp
 ```
 
 ## Note: 
@@ -31,17 +31,21 @@ running in Release mode in Rider, around 30% faster.
 ## Available Options:
 
 ```
---generate            - bool, generate the random file, default: false
---reuseUnsorted       - bool, reuse random file at path if size matches, default: true
---sizeGb              - int, size of the file to be generated, default: 10
+--generate         - bool,   generate the random file, default: false
+--reuseUnsorted    - bool,   reuse random file at path if size matches, default: true
+--fileSize         - size,   file size to be generated, (Ex: 512mb, 1gb), default: 10gb
 
---sort                - bool, sort unsorted file, default: false
---reuseChunks         - bool, reuse partially sorted chunks if exist, default: false
---chunkFileSizeMb     - int, default: 1024
---baseChunkSizeMb     - int, size of chunk sorted directly, default: 63
+--sort             - bool,   sort unsorted file, default: false
+--reuseChunks      - bool,   reuse partially sorted chunks if exist, default: false
+--chunkFileSize    - size,   default: 1024mb
+--readChunkSize    - size,   size of chunk read and sorted directly, default: 32mb
 
---path                - string, default: ./SortArtifacts
---delete              - bool, delete all created files, overrides keepChunks, default: false
---keepChunks          - bool, keep chunks after run, default: true
---memoryBudgetGb      - int, default: 16
+--path             - string, default: ./SortArtifacts
+--delete           - bool,   delete all created files, overrides keepChunks, default: false
+--keepChunks       - bool,   keep chunks after run, default: true
+--memoryBudget     - size,   default: 16gb
+
+Note: data size is expressed as a whole number or a number with suffix kb|mb|gb, 
+      example: 1024, 1mb, 10gb
+
 ```

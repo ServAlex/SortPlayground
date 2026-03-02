@@ -1,4 +1,5 @@
 using LargeFileSort.Configurations;
+using LargeFileSort.Domain;
 using Microsoft.Extensions.Options;
 
 namespace LargeFileSort.Tests.Helpers;
@@ -11,7 +12,7 @@ public static class TestOptionsFactory
 		{
 			Enabled = false,
 			Reuse = false,
-			FileSizeGb = 1
+			FileSize = DataSize.Parse("512mb")
 		};
 
 		configure?.Invoke(options);
@@ -24,13 +25,13 @@ public static class TestOptionsFactory
 		{
 			Enabled = false,
 			ReuseChunks = false,
-			IntermediateFileSizeMaxMb = 128,
-			BaseChunkSizeMb = 16,
+			ChunkFileSizeMax = DataSize.Parse("128mb"),
+			ReadChunkSize = DataSize.Parse("16mb"),
 			QueueLength = 4,
 			SortWorkerCount = 4,
 			MergeWorkerCount = 2,
 			MergeToFileWorkerCount = 1,
-			BufferSizeMb = 1
+			BufferSize = DataSize.Parse("1mb")
 		};
 
 		configure?.Invoke(options);
@@ -46,7 +47,7 @@ public static class TestOptionsFactory
 			SortedFileName = "sorted.txt",
 			FilesLocation = tempDir,
 			ChunksDirectoryBaseName = "Chunks",
-			MemoryBudgetGb = 4,
+			MemoryBudget = DataSize.Parse("16gb"),
 			KeepChunks = false
 		};
 

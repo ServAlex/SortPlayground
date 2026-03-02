@@ -66,7 +66,7 @@ public class FileGenerator
 		}
 		
 		var filePath = Path.Combine(_generalOptions.FilesLocation, _generalOptions.UnsortedFileName);
-		var desiredFileSize = (long)_fileGenerationOptions.FileSizeGb * 1024 * 1024 * 1024;
+		var desiredFileSize = _fileGenerationOptions.FileSize;
 
 		if (_fileGenerationOptions.Reuse 
 		    && _fileSystem.FileExists(filePath) 
@@ -87,7 +87,7 @@ public class FileGenerator
 		
 		var sw = Stopwatch.StartNew();
 		Console.WriteLine($"Generating {_generalOptions.UnsortedFileName} file, " +
-		                  $"size {_fileGenerationOptions.FileSizeGb} GB");
+		                  $"size {_fileGenerationOptions.FileSize.ToDataSizeString("gb")}");
 		
 		var loggerCancellationTokenSource = new CancellationTokenSource();
 		// ReSharper disable once MethodSupportsCancellation

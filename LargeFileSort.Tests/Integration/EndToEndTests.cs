@@ -1,4 +1,5 @@
 using LargeFileSort.Configurations;
+using LargeFileSort.Domain;
 using LargeFileSort.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -28,10 +29,19 @@ public class EndToEndTests : IDisposable
 		builder.Configuration.Sources.Clear();
 
 		builder.Services.AddSingleton(
-			TestOptionsFactory.FileGeneration(o => o.Enabled = true));
+			TestOptionsFactory.FileGeneration(o =>
+			{
+				o.Enabled = true;
+				o.FileSize = DataSize.Parse("32mb");
+			}));
 
 		builder.Services.AddSingleton(
-			TestOptionsFactory.Sort(o => o.Enabled = true));
+			TestOptionsFactory.Sort(o =>
+			{
+				o.Enabled = true;
+				o.ChunkFileSizeMax = DataSize.Parse("2mb");
+				o.ReadChunkSize = DataSize.Parse("128kb");
+			}));
 
 		builder.Services.AddSingleton(
 			TestOptionsFactory.General(_tempDir, o => { o.SortedFileName = outputFileName; }));
