@@ -31,8 +31,6 @@ public sealed class SortOptions
 	[Required]
 	[Range(1, 20)]
 	public required int SortWorkerCount { get; set; }
-	
-	[Required]
-	[Range(1, 32)]
-	public required int BufferSizeMb { get; set; }
+
+	public DataSize BufferSize { get; set; } = null!;
 }

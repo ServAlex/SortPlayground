@@ -67,17 +67,15 @@ public class SortedFilesMerger(
 						MergeFiles(
 							files.Where((_, i) => i % intermediateMergeThreads == q).ToArray(),
 							intermediateChannels[q],
-							_sortOptions.BufferSizeMb * 1024 * 1024,
+							(int)_sortOptions.BufferSize,
 							batchSize,
 							q)
 					)
 				)
 		);
 		
-		var finalMergeTask = Task.Run(() => FinalMerge(
-			intermediateChannels, 
-			sortedFilePath, 
-			_sortOptions.BufferSizeMb * 1024 * 1024));
+		var finalMergeTask = Task.Run(() => 
+			FinalMerge(intermediateChannels, sortedFilePath, (int)_sortOptions.BufferSize));
 		tasks.Add(finalMergeTask);
 		
 		var loggerCancellationTokenSource = new CancellationTokenSource();

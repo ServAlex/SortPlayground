@@ -31,7 +31,7 @@ public static class TestOptionsFactory
 			SortWorkerCount = 4,
 			MergeWorkerCount = 2,
 			MergeToFileWorkerCount = 1,
-			BufferSizeMb = 1
+			BufferSize = DataSize.Parse("1mb")
 		};
 
 		configure?.Invoke(options);

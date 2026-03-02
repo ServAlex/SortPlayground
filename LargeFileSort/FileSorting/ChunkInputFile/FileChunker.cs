@@ -173,8 +173,7 @@ public class FileChunker
 	{
 		_logger.LogSingleMessage($"Started reading {_unsortedFilePath}");
 
-		using var reader = _fileSystem.GetFileReader(
-			_unsortedFilePath, _sortOptions.BufferSizeMb * 1024 * 1024);
+		using var reader = _fileSystem.GetFileReader(_unsortedFilePath, (int)_sortOptions.BufferSize);
 		
 		var chunk = new UnsortedChunk(_readChunkSize);
 		bool isReadToEnd;
@@ -325,7 +324,7 @@ public class FileChunker
 			}
 
 			var path = Path.Combine(_chunkDirectoryPath, filename);
-			await using var writer = _fileSystem.GetFileWriter(path, _sortOptions.BufferSizeMb * 1024 * 1024);
+			await using var writer = _fileSystem.GetFileWriter(path, (int)_sortOptions.BufferSize);
 		
 			if (chunkB is not null)
 			{
