@@ -6,13 +6,13 @@ public class SortedChunk
 {
 	public readonly int ChunkRank;
 	
-	private readonly Line[] _lines;
+	private readonly LineMetadata[] _metadataRecords;
 	private readonly int _linesCount;
 	private readonly UnsortedChunk[] _subChunks;
 
-	public SortedChunk(Line[] lines, UnsortedChunk chunk, int chunkRank, int linesCount)
+	public SortedChunk(LineMetadata[] metadataRecords, UnsortedChunk chunk, int chunkRank, int linesCount)
 	{
-		_lines = lines;
+		_metadataRecords = metadataRecords;
 		_subChunks = [chunk];
 		ChunkRank = chunkRank;
 		_linesCount = linesCount;
@@ -24,7 +24,7 @@ public class SortedChunk
 		ChunkRank = Math.Min(chunkA.ChunkRank, chunkB.ChunkRank) - 1;
 		_subChunks = [..chunkA._subChunks, ..chunkB._subChunks];
 		var subChunksCountA = (short)chunkA._subChunks.Length;
-		_lines = new Line[_linesCount];
+		_metadataRecords = new LineMetadata[_linesCount];
 
 		var i = 0;
 		var j = 0;
@@ -32,30 +32,30 @@ public class SortedChunk
 
 		while (i < chunkA._linesCount && j < chunkB._linesCount)
 		{
-			ref readonly var a = ref chunkA._lines[i];
-			ref readonly var b = ref chunkB._lines[j];
+			ref readonly var a = ref chunkA._metadataRecords[i];
+			ref readonly var b = ref chunkB._metadataRecords[j];
 			
 			if (Compare(a, b, chunkA._subChunks, chunkB._subChunks) < 0)
 			{
-				_lines[k++] = a;
+				_metadataRecords[k++] = a;
 				i++;
 			}
 			else
 			{
-				_lines[k++] = b with {SubChunkIndex = (short)(b.SubChunkIndex + subChunksCountA)};
+				_metadataRecords[k++] = b with {SubChunkIndex = (short)(b.SubChunkIndex + subChunksCountA)};
 				j++;
 			}
 		}
 		
 		while (i < chunkA._linesCount)
 		{
-			_lines[k++] = chunkA._lines[i++];
+			_metadataRecords[k++] = chunkA._metadataRecords[i++];
 		}
 		
 		while (j < chunkB._linesCount)
 		{
-			ref readonly var b = ref chunkB._lines[j++];
-			_lines[k++] = b with {SubChunkIndex = (short)(b.SubChunkIndex + subChunksCountA)};
+			ref readonly var b = ref chunkB._metadataRecords[j++];
+			_metadataRecords[k++] = b with {SubChunkIndex = (short)(b.SubChunkIndex + subChunksCountA)};
 		}
 	}
 
@@ -71,18 +71,14 @@ public class SortedChunk
 		
 		while (i < chunkA._linesCount && j < chunkB._linesCount)
 		{
-			ref readonly var a = ref chunkA._lines[i];
-			ref readonly var b = ref chunkB._lines[j];
+			ref readonly var a = ref chunkA._metadataRecords[i];
+			ref readonly var b = ref chunkB._metadataRecords[j];
 			
 			if (Compare(a, b, chunkA._subChunks, chunkB._subChunks) < 0)
 			{
 				i++;
 				if(a.LineLength > 0)
 					writer.WriteLine(chunkA._subChunks[a.SubChunkIndex].Span.Slice(a.LineOffset, a.LineLength));
-				
-				/*
-				todo: write to buffer and flush it
-				*/
 			}
 			else
 			{
@@ -106,7 +102,7 @@ public class SortedChunk
 		var initialBytesWritten = logger.BytesWritten;
 		for (var i = startIndex; i < _linesCount; i++)
 		{
-			ref readonly var line = ref _lines[i];
+			ref readonly var line = ref _metadataRecords[i];
 			if(line.LineLength > 0)
 				writer.WriteLine(_subChunks[line.SubChunkIndex].Span.Slice(line.LineOffset, line.LineLength));
 
@@ -117,14 +113,14 @@ public class SortedChunk
 		}
 	}
 
-	private static int Compare(Line a, Line b, UnsortedChunk[] chunkArrayA, UnsortedChunk[] chunkArrayB)
+	private static int Compare(LineMetadata a, LineMetadata b, UnsortedChunk[] chunkArrayA, UnsortedChunk[] chunkArrayB)
 	{
 		var prefixComparison = a.Prefix.CompareTo(b.Prefix);
 		if (prefixComparison != 0)
 			return prefixComparison;
 
-		var spanA = chunkArrayA[a.SubChunkIndex] .Buffer.AsSpan(a.LineOffset + a.StringOffsetFromLine, a.StringLength);
-		var spanB = chunkArrayB[b.SubChunkIndex] .Buffer.AsSpan(b.LineOffset + b.StringOffsetFromLine, b.StringLength);
+		var spanA = chunkArrayA[a.SubChunkIndex].Buffer.AsSpan(a.LineOffset + a.StringOffsetInLine, a.StringLength);
+		var spanB = chunkArrayB[b.SubChunkIndex].Buffer.AsSpan(b.LineOffset + b.StringOffsetInLine, b.StringLength);
 
 		var sequenceCompare = spanA.SequenceCompareTo(spanB);
 		if (sequenceCompare != 0)

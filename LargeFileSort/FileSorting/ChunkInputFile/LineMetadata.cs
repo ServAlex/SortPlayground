@@ -3,14 +3,14 @@ namespace LargeFileSort.FileSorting.ChunkInputFile;
 /// <summary>
 /// represents a single line in a char[] buffer
 /// </summary>
-public struct Line
+public struct LineMetadata
 {
 	/// <summary>
 	/// encodes first 8 chars of the string portion for fast track in comparator
 	/// </summary>
 	public long Prefix;
 	public int LineOffset;
-	public short StringOffsetFromLine;
+	public short StringOffsetInLine;
 	public short LineLength;
 	public short StringLength;
 	public short SubChunkIndex;
@@ -27,16 +27,13 @@ public struct Line
 		return v << ((8 - len) * 8);
 	}
 
-	internal static int ParseLines(ReadOnlySpan<char> data, ref Line[] lines)
+	internal static void ParseLines(ReadOnlySpan<char> data, ref LineMetadata[] metadataRecords)
 	{
-		int count = 0;
+		int lineIndex = 0;
 		int i = 0;
 
 		while (i < data.Length)
 		{
-			if (count == lines.Length)
-				Array.Resize(ref lines, lines.Length * 2);
-
 			int lineStart = i;
 
 			int number = 0;
@@ -60,10 +57,10 @@ public struct Line
 			int lineLength = lineEnd - lineStart;
 			int textLength = lineEnd - textStart;
 
-			ref var r = ref lines[count++];
+			ref var r = ref metadataRecords[lineIndex++];
 			r.Number = number;
 			r.LineOffset = lineStart;
-			r.StringOffsetFromLine = (short)(textStart - lineStart);
+			r.StringOffsetInLine = (short)(textStart - lineStart);
 			r.LineLength = (short)lineLength;
 			r.StringLength = (short)textLength;
 			r.SubChunkIndex = 0;
@@ -72,27 +69,23 @@ public struct Line
 			i++; // '\n'
 		}
 		// todo: skip empty lines
-
-		return count;
 	}	
 	
-	internal static int ParseLines2(ReadOnlySpan<char> data, ref Line[] lines)
+	internal static void ParseLines2(ReadOnlySpan<char> data, ref LineMetadata[] metadataRecords)
 	{
-		int count = 0;
+		int lineIndex = 0;
 		int i = 0;
 
 		while (i < data.Length)
 		{
-			if (count == lines.Length)
-				Array.Resize(ref lines, lines.Length * 2);
+			if (lineIndex == metadataRecords.Length)
+				Array.Resize(ref metadataRecords, metadataRecords.Length * 2);
 
-			lines[count++] = ParseLineData(data, ref i);
+			metadataRecords[lineIndex++] = ParseLineData(data, ref i);
 		}
-
-		return count;
 	}	
 	
-	internal static Line ParseLineData(ReadOnlySpan<char> data, ref int i)
+	internal static LineMetadata ParseLineData(ReadOnlySpan<char> data, ref int i)
 	{
 		int lineStart = i;
 
@@ -117,14 +110,14 @@ public struct Line
 		int lineLength = lineEnd - lineStart;
 		int textLength = lineEnd - textStart;
 
-		Line line;
+		LineMetadata line;
 		line.Number = number;
 		line.LineOffset = lineStart;
-		line.StringOffsetFromLine = (short)(textStart - lineStart);
+		line.StringOffsetInLine = (short)(textStart - lineStart);
 		line.LineLength = (short)lineLength;
 		line.StringLength = (short)textLength;
 		line.SubChunkIndex = 0;
-		line.Prefix = Line.EncodeAscii8(data.Slice(textStart, textLength));
+		line.Prefix = EncodeAscii8(data.Slice(textStart, textLength));
 
 		i++; // '\n'
 		return line;

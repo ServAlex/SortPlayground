@@ -121,7 +121,7 @@ public class FileChunker
 		loggerCancellationTokenSource.Cancel();
 		
 		Console.WriteLine();
-		Console.WriteLine($"Split to sorted files in: {sw.ElapsedMilliseconds/1000.0:F1} ms");
+		Console.WriteLine($"Split to sorted files in: {sw.ElapsedMilliseconds/1000.0:F1} s");
 		Console.WriteLine();
 		
 		return _inputFileSize;
@@ -227,19 +227,19 @@ public class FileChunker
 			var linesCount = 0;
 			for (var i = 0; i < chunk.FilledLength; i++)
 			{
-				if (chunk.Span[..chunk.FilledLength][i] == '\n')
+				if (chunk.Span[i] == '\n')
 					linesCount++;
 			}
 					
 			// parse
-			var records = new Line[linesCount];
-			var count = Line.ParseLines(chunk.Span[..chunk.FilledLength], ref records);
+			var metadataRecords = new LineMetadata[linesCount];
+			LineMetadata.ParseLines(chunk.Span[..chunk.FilledLength], ref metadataRecords);
 					
 			// sort
 			var comparer = new LineComparer(chunk.Buffer);
-			Array.Sort(records, 0, count, comparer);
+			Array.Sort(metadataRecords, 0, linesCount, comparer);
 			
-			var sortedChunk = new SortedChunk(records, chunk, _maxRank, count);
+			var sortedChunk = new SortedChunk(metadataRecords, chunk, _maxRank, linesCount);
 			await _mergeInMemoryChannel.Writer.WriteAsync(sortedChunk);
 		}
 	}
