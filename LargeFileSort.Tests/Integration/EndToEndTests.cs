@@ -1,3 +1,4 @@
+using FluentAssertions;
 using LargeFileSort.Configurations;
 using LargeFileSort.Domain;
 using LargeFileSort.Tests.Helpers;
@@ -22,6 +23,7 @@ public class EndToEndTests : IDisposable
 	[Trait("Category", "Integration")]	
 	public void Application_ShouldOutputSortedFile_WhenRun()
 	{
+		const string inputFileName = "unsorted.txt";
 		const string outputFileName = "sorted.txt";
 
 		var builder = Program.CreateAppBuilder([]);
@@ -44,14 +46,20 @@ public class EndToEndTests : IDisposable
 			}));
 
 		builder.Services.AddSingleton(
-			TestOptionsFactory.General(_tempDir, o => { o.SortedFileName = outputFileName; }));
+			TestOptionsFactory.General(_tempDir, o =>
+			{
+				o.UnsortedFileName = inputFileName;
+				o.SortedFileName = outputFileName; 
+			}));
 
 		var host = builder.Build();
 
 		OptionsHelper.ValidateConfiguration(host.Services);
 		host.Services.GetRequiredService<ApplicationRunner>().Run();
+		var inputPath = Path.Combine(_tempDir, inputFileName);
+		var outputPath = Path.Combine(_tempDir, outputFileName);
 
-		var lines = File.ReadAllLines(Path.Combine(_tempDir, outputFileName));
+		var lines = File.ReadAllLines(outputPath);
 
 		var lastLine = ParseLine(lines[0]);
 		for (var i = 1; i < lines.Length; i++)
@@ -60,6 +68,11 @@ public class EndToEndTests : IDisposable
 			Assert.True(Compare(lastLine, newLine) <= 0);
 			lastLine = newLine;
 		}
+		
+		var inputFileSize = new FileInfo(inputPath).Length;
+		var outputFileSize = new FileInfo(outputPath).Length;
+		
+		inputFileSize.Should().Be(outputFileSize);
 	}
 
 	private record Line(string FullLine, int Number, int TextOffset, int TextLength);
