@@ -2,12 +2,21 @@ using LargeFileSort.Logging;
 
 namespace LargeFileSort.FileSorting.ChunkInputFile;
 
+/// <summary>
+/// consists of one or more UnsortedChunks and maintains order of lines across those chunks
+/// </summary>
 public class SortedChunk
 {
 	public readonly int ChunkRank;
 	
+	/// <summary>
+	/// the order of metadata records represents the order of lines in the chunks
+	/// </summary>
 	private readonly LineMetadata[] _metadataRecords;
 	private readonly int _linesCount;
+	/// <summary>
+	/// store actual char buffers
+	/// </summary>
 	private readonly UnsortedChunk[] _subChunks;
 
 	public SortedChunk(LineMetadata[] metadataRecords, UnsortedChunk chunk, int chunkRank, int linesCount)
@@ -18,6 +27,9 @@ public class SortedChunk
 		_linesCount = linesCount;
 	}
 
+	/// <summary>
+	/// constructs a new sorted chunk by merging two sorted chunks
+	/// </summary>
 	public SortedChunk(SortedChunk chunkA,  SortedChunk chunkB)
 	{
 		_linesCount = chunkA._linesCount +  chunkB._linesCount;
@@ -59,6 +71,9 @@ public class SortedChunk
 		}
 	}
 
+	/// <summary>
+	/// writes all the lines from this and second sorted chunk to a stream in sorted order
+	/// </summary>
 	public void MergeToStream(SortedChunk secondChunk, StreamWriter writer, LiveProgressLogger logger)
 	{
 		var chunkA = this;
@@ -97,6 +112,9 @@ public class SortedChunk
 		chunkB.WriteChunk(writer, logger, j);
 	}
 
+	/// <summary>
+	/// writes all the lines to a stream in sorted order
+	/// </summary>
 	public void WriteChunk(StreamWriter writer, LiveProgressLogger logger, int startIndex = 0)
 	{
 		var initialBytesWritten = logger.BytesWritten;
