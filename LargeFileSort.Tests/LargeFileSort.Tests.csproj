@@ -24,4 +24,10 @@
       <ProjectReference Include="..\LargeFileSort\LargeFileSort.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Unit\FileDeletion\" />
+      <Folder Include="Unit\FileGeneration\" />
+      <Folder Include="Unit\FileSorting\Merging\" />
+    </ItemGroup>
+
 </Project>

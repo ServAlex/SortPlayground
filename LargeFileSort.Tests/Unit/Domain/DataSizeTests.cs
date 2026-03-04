@@ -1,7 +1,7 @@
 using FluentAssertions;
 using LargeFileSort.Domain;
 
-namespace LargeFileSort.Tests.Unit;
+namespace LargeFileSort.Tests.Unit.Domain;
 
 public class DataSizeTests
 {

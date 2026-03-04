@@ -24,18 +24,19 @@ public struct LineMetadata
 		while (i < data.Length)
 		{
 			int lineStart = i;
+			while (i < data.Length && data[i] == ' ') i++;
 
 			int number = 0;
-			while (data[i] != '.')
+			while (data[i] >= '0' && data[i] <= '9')
 				number = number * 10 + (data[i++] - '0');
 
-			i++; // '.'
-			if (data[i] == ' ') i++;
+			while (i < data.Length && data[i] == ' ') i++;
+			if (data[i] == '.') i++;
+			while (i < data.Length && data[i] == ' ') i++;
 
 			int textStart = i;
 
-			while (i < data.Length && data[i] != '\n')
-				i++;
+			while (i < data.Length && data[i] != '\n') i++;
 
 			int lineEnd = i;
 			if (i > textStart && data[i - 1] == '\r')
@@ -57,7 +58,6 @@ public struct LineMetadata
 
 			i++; // '\n'
 		}
-		// todo: skip empty lines
 	}
 
 	private static long EncodeAscii8(ReadOnlySpan<char> s)
