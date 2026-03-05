@@ -131,6 +131,20 @@ public class SortedChunk
 		}
 	}
 
+	public IEnumerable<(int LineNumber, string Text)> GetLines()
+	{
+		foreach (var r in _metadataRecords)
+		{
+			yield return (
+				r.Number,
+				_subChunks[r.SubChunkIndex]
+					.Span
+					.Slice(r.LineOffset + r.StringOffsetInLine, r.StringLength)
+					.ToString()
+			);
+		}
+	}
+
 	private static int Compare(LineMetadata a, LineMetadata b, UnsortedChunk[] chunkArrayA, UnsortedChunk[] chunkArrayB)
 	{
 		var prefixComparison = a.Prefix.CompareTo(b.Prefix);
