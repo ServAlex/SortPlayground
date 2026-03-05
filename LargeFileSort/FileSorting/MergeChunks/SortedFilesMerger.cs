@@ -31,7 +31,7 @@ public class SortedFilesMerger(
 		Console.WriteLine();
 
 		var files = ValidatedChunkFiles(chunksDirectoryPath);
-		CheckIfEnoughSpace(files, sortedFilePath);
+		CheckIfEnoughSpace(files, _generalOptions.FilesLocation);
 		
 		var sw = Stopwatch.StartNew();
 		var chunksCount = files.Length;
@@ -115,14 +115,14 @@ public class SortedFilesMerger(
 		return files;
 	}
 
-	private void CheckIfEnoughSpace(FileInfo[] files, string path)
+	private void CheckIfEnoughSpace(FileInfo[] files, string directoryPath)
 	{
 		var totalSize = files.Sum(f => f.Length);
 
-		if (!fileSystem.HasEnoughFreeSpace(path, totalSize))
+		if (!fileSystem.HasEnoughFreeSpace(directoryPath, totalSize))
 		{
 			throw new InsufficientFreeDiskException($"Not enough free space on disk to merge {files.Length} " +
-			                                        $"chunk files into final file {path}");
+			                                        $"chunk files into final file in directory {directoryPath}");
 		}
 	}
 
