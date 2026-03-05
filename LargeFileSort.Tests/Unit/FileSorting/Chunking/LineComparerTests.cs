@@ -12,6 +12,8 @@ public class LineComparerTests
 	[InlineData("2. apple\n", "2. apple apple\n")]
 	[InlineData("2. apple\n", "2. apple pie\n")]
 	[InlineData("0. \n", "1. apple\n")]
+	[InlineData("1. apple apple\n", "1. apple apple apple\n")]
+	[InlineData("1. apple apple apple\n", "1. apple apple banana\n")]
 	public void Compare_FirstIsSmaller(string first, string second)
 	{
 		// arrange
