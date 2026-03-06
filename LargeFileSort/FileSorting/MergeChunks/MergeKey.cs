@@ -1,6 +1,6 @@
 namespace LargeFileSort.FileSorting.MergeChunks;
 
-internal readonly struct MergeKey : IComparable<MergeKey>
+public readonly struct MergeKey : IComparable<MergeKey>
 {
 	private readonly string _line;
 	private readonly int _textOffset;

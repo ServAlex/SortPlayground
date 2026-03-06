@@ -1,6 +1,6 @@
 namespace LargeFileSort.FileSorting.MergeChunks;
 
-internal readonly struct MergeItem
+public readonly struct MergeItem
 {
 	public readonly string Line;
 	public readonly int TextOffset;
