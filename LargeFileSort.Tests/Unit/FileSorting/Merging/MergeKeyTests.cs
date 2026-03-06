@@ -36,7 +36,11 @@ public class MergeKeyTests
 
 	private static int Compare(MergeItem a, MergeItem b)
 	{
-		var textComparision = a.Line.AsSpan(a.TextOffset).SequenceCompareTo(b.Line.AsSpan(b.TextOffset));
+		var textComparision = string.CompareOrdinal(
+			a.Line, a.TextOffset, 
+			b.Line, b.TextOffset, 
+			Math.Max(a.TextLength, b.TextLength));
+		
 		if (textComparision != 0)
 			return textComparision;
 		
