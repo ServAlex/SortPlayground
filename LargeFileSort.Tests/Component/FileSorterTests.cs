@@ -138,4 +138,99 @@ public class FileSorterTests
 			return aNumber.CompareTo(bNumber);
 		}
 	}
+
+	[Fact]
+	public void FileMerger_ShouldMergeSortedFilesToSingleSortedFile()
+	{
+		// arrange
+		var services = new ServiceCollection();
+		services.AddSingleton<SortedFilesMerger>();
+		services.AddSingleton<LiveProgressLogger>();
+		
+		services.AddSingleton(TestOptionsFactory.General(""));
+		services.AddSingleton(TestOptionsFactory.Sort(o =>
+		{
+			o.Enabled = true;
+			o.BufferSize = DataSize.FromBytes(10);
+		}));
+
+		var items = new List<(int number, string text)>();
+
+		for (var i = 0; i < 30; i++)
+			items.AddRange([
+				(10, "apple"),
+				(5, "apple"),
+				(1, "fig"),
+				(11, "fig"),
+				(2, "banana"),
+				(12, "banana"),
+				(1, "cherry")
+			]);
+
+		var memoryStreams = items
+			.Chunk(20)
+			.Select(g =>
+		{
+			g.Sort(new TupleComparer());
+			var ms = new MemoryStream();
+			using var writer = new StreamWriter(ms, leaveOpen: true);
+			foreach (var (number, text) in g)
+			{
+				writer.WriteLine($"{number}. {text}");
+			}
+			ms.Position = 0;
+			return ms;
+		}).ToArray();
+
+		foreach (var ms in memoryStreams)
+		{
+			ms.Position = 0;
+		}
+		
+		var fileInfos = 
+			memoryStreams.Select((v, i) => new FileInfo($"file{i}.txt")).ToArray();
+		
+		var outputMemoryStream = new MemoryStream();
+		
+		var readerIndex = 0;
+		var fileSystemMock = Substitute.For<IFileSystem>();
+		fileSystemMock.HasEnoughFreeSpace(Arg.Any<string>(), Arg.Any<long>()).Returns(true);
+		fileSystemMock.GetFileWriter(Arg.Any<string>(), Arg.Any<int>())
+			.Returns(q => new StreamWriter(outputMemoryStream, leaveOpen: true) );
+		fileSystemMock.GetFiles(Arg.Any<string>()).Returns(fileInfos);
+		fileSystemMock
+			.GetFileReader(Arg.Any<string>(), Arg.Any<int>())
+			.Returns(q => new StreamReader(memoryStreams[readerIndex++]));
+		fileSystemMock.FileExists(Arg.Any<string>()).Returns(true);
+		fileSystemMock.GetFileSize(Arg.Any<string>()).Returns(100);
+		fileSystemMock.GetFileSize(Arg.Any<FileInfo>()).Returns(100);
+		fileSystemMock.DirectoryExists(Arg.Any<string>()).Returns(true);
+
+		services.AddSingleton(fileSystemMock);
+		
+		var provider = services.BuildServiceProvider();
+		var merger = provider.GetRequiredService<SortedFilesMerger>();
+		
+		// act
+		merger.MergeSortedFiles();
+		
+		// assert
+		outputMemoryStream.Position = 0;
+		using var reader = new StreamReader(outputMemoryStream);
+		var lines = reader.ReadToEnd().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+		lines.Should().BeInAscendingOrder(l => l, new FullLineComparer());
+		
+	}
+	
+	private class TupleComparer : IComparer<(int number, string text)>
+	{
+		public int Compare((int number, string text) a, (int number, string text) b)
+		{
+			var comparison = string.CompareOrdinal(a.text, b.text);
+			if (comparison != 0) 
+				return comparison;
+		
+			return a.number.CompareTo(b.number);
+		}
+	}
 }
