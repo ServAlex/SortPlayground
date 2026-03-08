@@ -188,7 +188,7 @@ public class FileSorterTests
 		}
 		
 		var fileInfos = 
-			memoryStreams.Select((v, i) => new FileInfo($"file{i}.txt")).ToArray();
+			memoryStreams.Select((_, i) => new FileInfo($"file{i}.txt")).ToArray();
 		
 		var outputMemoryStream = new MemoryStream();
 		
@@ -196,11 +196,11 @@ public class FileSorterTests
 		var fileSystemMock = Substitute.For<IFileSystem>();
 		fileSystemMock.HasEnoughFreeSpace(Arg.Any<string>(), Arg.Any<long>()).Returns(true);
 		fileSystemMock.GetFileWriter(Arg.Any<string>(), Arg.Any<int>())
-			.Returns(q => new StreamWriter(outputMemoryStream, leaveOpen: true) );
+			.Returns(_ => new StreamWriter(outputMemoryStream, leaveOpen: true) );
 		fileSystemMock.GetFiles(Arg.Any<string>()).Returns(fileInfos);
 		fileSystemMock
 			.GetFileReader(Arg.Any<string>(), Arg.Any<int>())
-			.Returns(q => new StreamReader(memoryStreams[readerIndex++]));
+			.Returns(_ => new StreamReader(memoryStreams[readerIndex++]));
 		fileSystemMock.FileExists(Arg.Any<string>()).Returns(true);
 		fileSystemMock.GetFileSize(Arg.Any<string>()).Returns(100);
 		fileSystemMock.GetFileSize(Arg.Any<FileInfo>()).Returns(100);
