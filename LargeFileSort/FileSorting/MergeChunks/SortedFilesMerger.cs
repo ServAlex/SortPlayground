@@ -117,7 +117,7 @@ public class SortedFilesMerger(
 
 	private void CheckIfEnoughSpace(FileInfo[] files, string directoryPath)
 	{
-		var totalSize = files.Sum(f => f.Length);
+		var totalSize = files.Select(fileSystem.GetFileSize).Sum();
 
 		if (!fileSystem.HasEnoughFreeSpace(directoryPath, totalSize))
 		{

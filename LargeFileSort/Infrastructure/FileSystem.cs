@@ -21,6 +21,11 @@ public class FileSystem: IFileSystem
 		return new FileInfo(path).Length;
 	}
 
+	public long GetFileSize(FileInfo fileInfo)
+	{
+		return fileInfo.Length;
+	}
+
 	public bool DirectoryExists(string path)
 	{
 		return Directory.Exists(path);
