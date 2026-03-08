@@ -33,13 +33,13 @@ catch (FileNotFoundException e)
 catch (InsufficientFreeMemoryException e)
 {
 	Console.Error.WriteLine($"{e.Message}");
-	Console.Error.WriteLine("you may reduce --memoryBudgetGb and maybe --chunkFileSizeMb in options.");
+	Console.Error.WriteLine("you may reduce --memoryBudget and maybe --chunkFileSize in options.");
 	return 1;
 }
 catch (InsufficientFreeDiskException e)
 {
 	Console.Error.WriteLine(e.Message);
-	Console.Error.WriteLine("you may reduce --sizeGb in options - generate smaller input file.");
+	Console.Error.WriteLine("you may reduce --fileSize in options - generate smaller input file.");
 	return 1;
 }
 catch (Exception e)

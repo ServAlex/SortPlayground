@@ -6,9 +6,7 @@ public class FileSystem: IFileSystem
 {
 	public bool HasEnoughFreeSpace(string path, long requiredBytes)
 	{
-		var root = Path.GetPathRoot(Path.GetFullPath(path));
-
-		var drive = new DriveInfo(root!);
+		var drive = new DriveInfo(Path.GetFullPath(path));
 
 		return drive.AvailableFreeSpace >= requiredBytes;
 	}
@@ -21,6 +19,11 @@ public class FileSystem: IFileSystem
 	public long GetFileSize(string path)
 	{
 		return new FileInfo(path).Length;
+	}
+
+	public long GetFileSize(FileInfo fileInfo)
+	{
+		return fileInfo.Length;
 	}
 
 	public bool DirectoryExists(string path)

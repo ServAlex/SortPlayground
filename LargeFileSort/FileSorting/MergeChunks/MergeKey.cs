@@ -1,34 +1,22 @@
 namespace LargeFileSort.FileSorting.MergeChunks;
 
-internal readonly struct MergeKey : IComparable<MergeKey>
+public readonly struct MergeKey(MergeItem item) : IComparable<MergeKey>
 {
-	private readonly string _line;
-	private readonly int _textOffset;
-	private readonly int _textLength;
-	private readonly int _number;
-
-	public MergeKey(MergeItem item)
-	{
-		_line = item.Line;
-		_textOffset = item.TextOffset;
-		_textLength = item.TextLength;
-		_number = item.Number;
-	}
+	private readonly string _line = item.Line;
+	private readonly int _textOffset = item.TextOffset;
+	private readonly int _textLength = item.TextLength;
+	private readonly int _number = item.Number;
 
 	public int CompareTo(MergeKey other)
 	{
 		var comparison = string.CompareOrdinal(
 			_line, _textOffset, 
 			other._line, other._textOffset, 
-			Math.Min(_textLength, other._textLength));
+			Math.Max(_textLength, other._textLength));
 		
 		if (comparison != 0) 
 			return comparison;
-
-		if (_textLength != other._textLength)
-			return _textLength - other._textLength;
 		
 		return _number.CompareTo(other._number);
-
 	}
 }

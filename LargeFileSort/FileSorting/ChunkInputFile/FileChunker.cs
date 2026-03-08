@@ -32,6 +32,7 @@ public class FileChunker
 	private readonly Channel<(SortedChunk, SortedChunk?)> _mergeToFileChannel;
 	
 	private readonly SortOptions _sortOptions;
+	private readonly GeneralOptions _generalOptions;
 	private readonly LiveProgressLogger _logger;
 	private readonly IFileSystem _fileSystem;
 
@@ -42,6 +43,7 @@ public class FileChunker
 		IFileSystem fileSystem)
 	{
 		_sortOptions = sortOptions.Value;
+		_generalOptions = generalOptions.Value;
 		_logger = logger;
 		_fileSystem = fileSystem;
 		_sortWorkerCount = Environment.ProcessorCount 
@@ -53,12 +55,9 @@ public class FileChunker
 		_maxRank = MaxRank((long)(_sortOptions.ChunkFileSizeMax/2.0), _readChunkSize);
 		_sortedChunks = new SortedChunk?[_maxRank + 1];
 		
-		var generalOptionsValue = generalOptions.Value;
-		_memoryBudget = generalOptionsValue.MemoryBudget;
-		_unsortedFilePath = Path.Combine(generalOptionsValue.FilesLocation, generalOptionsValue.UnsortedFileName);
-		_chunkDirectoryPath = Path.Combine(
-			generalOptionsValue.FilesLocation, 
-			generalOptionsValue.ChunksDirectoryBaseName);
+		_memoryBudget = _generalOptions.MemoryBudget;
+		_unsortedFilePath = Path.Combine(_generalOptions.FilesLocation, _generalOptions.UnsortedFileName);
+		_chunkDirectoryPath = Path.Combine(_generalOptions.FilesLocation, _generalOptions.ChunksDirectoryBaseName);
 		
 		_sortChannel = Channel.CreateBounded<UnsortedChunk>(
 			new BoundedChannelOptions(_sortOptions.QueueLength)
@@ -121,7 +120,7 @@ public class FileChunker
 		loggerCancellationTokenSource.Cancel();
 		
 		Console.WriteLine();
-		Console.WriteLine($"Split to sorted files in: {sw.ElapsedMilliseconds/1000.0:F1} ms");
+		Console.WriteLine($"Split to sorted files in: {sw.ElapsedMilliseconds/1000.0:F1} s");
 		Console.WriteLine();
 		
 		return _inputFileSize;
@@ -159,7 +158,7 @@ public class FileChunker
 			_fileSystem.DeleteDirectory(_chunkDirectoryPath, true);
 		}
 		
-		if (!_fileSystem.HasEnoughFreeSpace(_chunkDirectoryPath, _inputFileSize))
+		if (!_fileSystem.HasEnoughFreeSpace(_generalOptions.FilesLocation, _inputFileSize))
 		{
 			throw new InsufficientFreeDiskException($"Not enough free space on disk to create " +
 			                                        $"chunks directory {_chunkDirectoryPath}");
@@ -227,19 +226,19 @@ public class FileChunker
 			var linesCount = 0;
 			for (var i = 0; i < chunk.FilledLength; i++)
 			{
-				if (chunk.Span[..chunk.FilledLength][i] == '\n')
+				if (chunk.Span[i] == '\n')
 					linesCount++;
 			}
 					
 			// parse
-			var records = new Line[linesCount];
-			var count = Line.ParseLines(chunk.Span[..chunk.FilledLength], ref records);
+			var metadataRecords = new LineMetadata[linesCount];
+			LineMetadata.ParseLines(chunk.Span[..chunk.FilledLength], ref metadataRecords);
 					
 			// sort
 			var comparer = new LineComparer(chunk.Buffer);
-			Array.Sort(records, 0, count, comparer);
+			Array.Sort(metadataRecords, 0, linesCount, comparer);
 			
-			var sortedChunk = new SortedChunk(records, chunk, _maxRank, count);
+			var sortedChunk = new SortedChunk(metadataRecords, chunk, _maxRank, linesCount);
 			await _mergeInMemoryChannel.Writer.WriteAsync(sortedChunk);
 		}
 	}

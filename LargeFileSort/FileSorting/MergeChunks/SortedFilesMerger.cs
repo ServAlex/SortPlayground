@@ -31,26 +31,26 @@ public class SortedFilesMerger(
 		Console.WriteLine();
 
 		var files = ValidatedChunkFiles(chunksDirectoryPath);
-		CheckIfEnoughSpace(files, sortedFilePath);
+		CheckIfEnoughSpace(files, _generalOptions.FilesLocation);
 		
 		var sw = Stopwatch.StartNew();
 		var chunksCount = files.Length;
 		
-		var intermediateMergeThreads =
+		var intermediateMergeThreadsCount =
 			Math.Min(
 				(int)Math.Floor(Math.Sqrt(chunksCount)), 
 				Environment.ProcessorCount - 1);
 		if(chunksCount is 2 or 3) 
-		 	intermediateMergeThreads = 2;
+		 	intermediateMergeThreadsCount = 2;
 		
 		const int batchSize = 100_000;
 		const int empiricalConstant = 600;
 		var intermediateChannelCapacity = (int)Math.Min(
 			100, 
-			_generalOptions.MemoryBudget/batchSize/intermediateMergeThreads/empiricalConstant);
+			_generalOptions.MemoryBudget/batchSize/intermediateMergeThreadsCount/empiricalConstant);
 		
 		var intermediateChannels = Enumerable
-			.Range(0, intermediateMergeThreads)
+			.Range(0, intermediateMergeThreadsCount)
 			.Select(_ => Channel.CreateBounded<MergeBatch>(new BoundedChannelOptions(intermediateChannelCapacity)
 			{
 				SingleWriter = true,
@@ -58,21 +58,18 @@ public class SortedFilesMerger(
 				FullMode = BoundedChannelFullMode.Wait
 			})).ToArray();
 
-		var tasks = new List<Task>();
-		tasks.AddRange(
-			Enumerable
-				.Range(0, intermediateMergeThreads)
-				.Select(q =>
-					Task.Run(() =>
-						MergeFiles(
-							files.Where((_, i) => i % intermediateMergeThreads == q).ToArray(),
-							intermediateChannels[q],
-							(int)_sortOptions.BufferSize,
-							batchSize,
-							q)
-					)
+		var tasks = Enumerable
+			.Range(0, intermediateMergeThreadsCount)
+			.Select(q =>
+				Task.Run(() =>
+					MergeFiles(
+						files.Where((_, i) => i % intermediateMergeThreadsCount == q).ToArray(),
+						intermediateChannels[q],
+						(int)_sortOptions.BufferSize,
+						batchSize,
+						q)
 				)
-		);
+			).ToList();
 		
 		var finalMergeTask = Task.Run(() => 
 			FinalMerge(intermediateChannels, sortedFilePath, (int)_sortOptions.BufferSize));
@@ -118,14 +115,14 @@ public class SortedFilesMerger(
 		return files;
 	}
 
-	private void CheckIfEnoughSpace(FileInfo[] files, string path)
+	private void CheckIfEnoughSpace(FileInfo[] files, string directoryPath)
 	{
-		var totalSize = files.Sum(f => f.Length);
+		var totalSize = files.Select(fileSystem.GetFileSize).Sum();
 
-		if (!fileSystem.HasEnoughFreeSpace(path, totalSize))
+		if (!fileSystem.HasEnoughFreeSpace(directoryPath, totalSize))
 		{
 			throw new InsufficientFreeDiskException($"Not enough free space on disk to merge {files.Length} " +
-			                                        $"chunk files into final file {path}");
+			                                        $"chunk files into final file in directory {directoryPath}");
 		}
 	}
 
@@ -154,6 +151,7 @@ public class SortedFilesMerger(
 		// populate queue
 		for (var i = 0; i < readers.Length; i++)
 		{
+			// ReSharper disable once MethodHasAsyncOverload
 			var line = readers[i].ReadLine();
 			if (string.IsNullOrEmpty(line)) 
 				continue;
@@ -177,6 +175,7 @@ public class SortedFilesMerger(
 			batch.Add(new MergeItem(item, mergerIndex));
 
 			var reader = readers[item.SourceIndex];
+			// ReSharper disable once MethodHasAsyncOverload
 			var nextLine = reader.ReadLine();
 			
 			if (string.IsNullOrEmpty(nextLine)) 
@@ -223,7 +222,6 @@ public class SortedFilesMerger(
 			}
 
 			var batch = batches[i] = await intermediateResultsChannels[i].Reader.ReadAsync();
-			//var batch = batches[i] = intermediateResultsChannels[i].Reader.ReadAsync().GetAwaiter().GetResult();
 			var item = batch.Items[batch.CurrentReadIndex++];
 			priorityQueue.Enqueue(new MergeItem(item, i), new MergeKey(item));
 		}
@@ -231,6 +229,7 @@ public class SortedFilesMerger(
 		// run until the queue is empty
 		while (priorityQueue.TryDequeue(out var item, out _))
 		{
+			// ReSharper disable once MethodHasAsyncOverload
 			writer.WriteLine(item.Line);
 			
 			logger.LinesWritten++;
@@ -262,6 +261,7 @@ public class SortedFilesMerger(
 			Debug.Assert(b == null || b.CurrentReadIndex == b.Count);
 		}
 
+		// ReSharper disable once MethodHasAsyncOverload
 		writer.Flush();
 		return writer.BaseStream.Position;
 	}

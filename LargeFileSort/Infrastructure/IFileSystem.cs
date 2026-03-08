@@ -5,6 +5,7 @@ public interface IFileSystem
 	bool HasEnoughFreeSpace(string path, long requiredBytes);
 	bool FileExists(string path);
 	long GetFileSize(string path);
+	long GetFileSize(FileInfo fileInfo);
 	bool DirectoryExists(string path);
 	void DeleteDirectory(string path, bool recursive);
 	void CreateDirectory(string path);
