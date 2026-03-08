@@ -48,7 +48,6 @@ public partial class FileGeneratorTests
 	{
 		// arrange
 		var services = new ServiceCollection();
-		services.AddSingleton<IFileSystem, FileSystem>();
 		services.AddSingleton<FileGenerator>();
 		services.AddSingleton<FileChunker>();
 		services.AddSingleton<SortedFilesMerger>();
