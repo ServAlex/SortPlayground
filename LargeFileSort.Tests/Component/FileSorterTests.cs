@@ -220,6 +220,8 @@ public class FileSorterTests
 		var lines = reader.ReadToEnd().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
 		lines.Should().BeInAscendingOrder(l => l, new FullLineComparer());
 		
+		var expectedLines = items.Select(i => $"{i.number}. {i.text}").ToArray();
+		lines.Should().BeEquivalentTo(expectedLines);
 	}
 	
 	private class TupleComparer : IComparer<(int number, string text)>
