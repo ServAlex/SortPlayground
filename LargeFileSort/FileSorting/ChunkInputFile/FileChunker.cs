@@ -52,7 +52,7 @@ public class FileChunker
 		                   - 1;
 		_readChunkSize = checked((int)_sortOptions.ReadChunkSize);
 		
-		_maxRank = MaxRank((long)(_sortOptions.ChunkFileSizeMax/2.0), _readChunkSize);
+		_maxRank = MaxRank(_sortOptions.ChunkFileSizeMax, _readChunkSize);
 		_sortedChunks = new SortedChunk?[_maxRank + 1];
 		
 		_memoryBudget = _generalOptions.MemoryBudget;
@@ -338,8 +338,9 @@ public class FileChunker
 		}
 	}
 
-	private static int MaxRank(long maxLength, long chunkSize)
+	private static int MaxRank(long chunkFileSize, long baseChunkSize)
 	{
-		return (int)Math.Floor(Math.Log2((double)maxLength / chunkSize));
+		long maxInMemoryChunkSize = chunkFileSize / 2;
+		return (int)Math.Floor(Math.Log2((double)maxInMemoryChunkSize / baseChunkSize));
 	}
 }

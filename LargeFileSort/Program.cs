@@ -25,6 +25,12 @@ catch (InvalidConfigurationException e)
 	Console.WriteLine(OptionsHelper.GetHelpText());
 	return 1;
 }
+catch (ChunkFileTooLargeException e)
+{
+	Console.Error.WriteLine(e.Message);
+	Console.Error.WriteLine("You may reduce value of --chunkFileSizeMax option (recommended 1024mb).");
+	return 1;
+}
 catch (FileNotFoundException e)
 {
 	Console.Error.WriteLine(e.Message);
@@ -33,13 +39,13 @@ catch (FileNotFoundException e)
 catch (InsufficientFreeMemoryException e)
 {
 	Console.Error.WriteLine($"{e.Message}");
-	Console.Error.WriteLine("you may reduce --memoryBudget and maybe --chunkFileSize in options.");
+	Console.Error.WriteLine("You may reduce --memoryBudget and maybe --chunkFileSizeMax in options.");
 	return 1;
 }
 catch (InsufficientFreeDiskException e)
 {
 	Console.Error.WriteLine(e.Message);
-	Console.Error.WriteLine("you may reduce --fileSize in options - generate smaller input file.");
+	Console.Error.WriteLine("You may reduce --fileSize in options - generate smaller input file.");
 	return 1;
 }
 catch (Exception e)

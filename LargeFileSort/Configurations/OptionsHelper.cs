@@ -27,6 +27,11 @@ public static class OptionsHelper
 			throw new InvalidConfigurationException(
 				"No action was specified. Use at least one of '--generate true', '--sort true' or '--delete true'");
 		}
+
+		if (sortOptions is { Enabled: true, ChunkFileSizeMax.Bytes: > (long)int.MaxValue*2})
+		{
+			throw new ChunkFileTooLargeException("Chunk file size should not exceed int.MaxValue*2 (4095mb)");
+		}
 	}
 
 	public static Dictionary<string, string> GetSwitchMappings()
@@ -39,7 +44,7 @@ public static class OptionsHelper
 	
 			{ "--sort", $"{nameof(SortOptions)}:{nameof(SortOptions.Enabled)}" },
 			{ "--reuseChunks", $"{nameof(SortOptions)}:{nameof(SortOptions.ReuseChunks)}" },
-			{ "--chunkFileSize", $"{nameof(SortOptions)}:{nameof(SortOptions.ChunkFileSizeMax)}" },
+			{ "--chunkFileSizeMax", $"{nameof(SortOptions)}:{nameof(SortOptions.ChunkFileSizeMax)}" },
 			{ "--readChunkSize", $"{nameof(SortOptions)}:{nameof(SortOptions.ReadChunkSize)}" },
 	
 			{ "--path", $"{nameof(GeneralOptions)}:{nameof(GeneralOptions.FilesLocation)}" },
@@ -60,7 +65,7 @@ public static class OptionsHelper
 		sb.AppendLine();
 		sb.AppendLine("  --sort             - bool,   sort unsorted file, default: false");
 		sb.AppendLine("  --reuseChunks      - bool,   reuse partially sorted chunks if exist, default: false");
-		sb.AppendLine("  --chunkFileSize    - size,   default: 1024mb");
+		sb.AppendLine("  --chunkFileSizeMax - size,   default: 1024mb");
 		sb.AppendLine("  --readChunkSize    - size,   size of chunk read and sorted directly, default: 32mb");
 		sb.AppendLine();
 		sb.AppendLine("  --path             - string, default: ./SortArtifacts");
