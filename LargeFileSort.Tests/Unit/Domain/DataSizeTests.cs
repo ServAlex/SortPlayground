@@ -11,8 +11,10 @@ public class DataSizeTests
 	[InlineData("2GB", 2L * 1024 * 1024 * 1024)]
 	public void Parse_ShouldConvertToBytes(string input, long expectedBytes)
 	{
+		// act
 		var result = DataSize.Parse(input);
 
+		// assert
 		result.Bytes.Should().Be(expectedBytes);
 	}
 
@@ -23,9 +25,9 @@ public class DataSizeTests
 	[InlineData("10XB")]
 	public void Parse_InvalidFormat_ShouldThrow(string input)
 	{
-		Action act = () => DataSize.Parse(input);
+		Action action = () => DataSize.Parse(input);
 
-		act.Should().Throw<FormatException>();
+		action.Should().Throw<FormatException>();
 	}
 	
 	[Theory]

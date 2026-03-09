@@ -23,6 +23,7 @@ public class EndToEndTests : IDisposable
 	[Trait("Category", "Integration")]	
 	public void Application_ShouldOutputSortedFile_WhenRun()
 	{
+		// arrange
 		const string inputFileName = "unsorted.txt";
 		const string outputFileName = "sorted.txt";
 
@@ -30,32 +31,32 @@ public class EndToEndTests : IDisposable
 
 		builder.Configuration.Sources.Clear();
 
-		builder.Services.AddSingleton(
-			TestOptionsFactory.FileGeneration(o =>
-			{
-				o.Enabled = true;
-				o.FileSize = DataSize.Parse("32mb");
-			}));
+		builder.Services.AddSingleton(TestOptionsFactory.FileGeneration(o =>
+		{
+			o.Enabled = true;
+			o.FileSize = DataSize.Parse("32mb");
+		}));
 
-		builder.Services.AddSingleton(
-			TestOptionsFactory.Sort(o =>
-			{
-				o.Enabled = true;
-				o.ChunkFileSizeMax = DataSize.Parse("2mb");
-				o.ReadChunkSize = DataSize.Parse("128kb");
-			}));
+		builder.Services.AddSingleton(TestOptionsFactory.Sort(o =>
+		{
+			o.Enabled = true;
+			o.ChunkFileSizeMax = DataSize.Parse("2mb");
+			o.ReadChunkSize = DataSize.Parse("128kb");
+		}));
 
-		builder.Services.AddSingleton(
-			TestOptionsFactory.General(_tempDir, o =>
-			{
-				o.UnsortedFileName = inputFileName;
-				o.SortedFileName = outputFileName; 
-			}));
+		builder.Services.AddSingleton(TestOptionsFactory.General(_tempDir, o =>
+		{
+			o.UnsortedFileName = inputFileName;
+			o.SortedFileName = outputFileName;
+		}));
 
 		var host = builder.Build();
 
+		// act
 		OptionsHelper.ValidateConfiguration(host.Services);
 		host.Services.GetRequiredService<ApplicationRunner>().Run();
+		
+		// assert
 		var inputPath = Path.Combine(_tempDir, inputFileName);
 		var outputPath = Path.Combine(_tempDir, outputFileName);
 

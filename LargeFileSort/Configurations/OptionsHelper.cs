@@ -53,11 +53,6 @@ public static class OptionsHelper
 	{
 		var sb = new StringBuilder();
 		sb.AppendLine("Options:");
-		//var mappings = GetSwitchMappings();
-		// foreach (var (key, value) in mappings)
-		// {
-		// 	sb.AppendLine($"  {key}");
-		// }
 		sb.AppendLine();
 		sb.AppendLine("  --generate         - bool,   generate the random file, default: false");
 		sb.AppendLine("  --reuseUnsorted    - bool,   reuse random file at path if size matches, default: true");

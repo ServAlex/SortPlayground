@@ -56,7 +56,6 @@ public abstract partial class Program
 	{
 		var builder = Host.CreateApplicationBuilder(strings);
 		builder.Configuration.AddCommandLine(strings, OptionsHelper.GetSwitchMappings());
-		//Console.WriteLine(builder.Configuration.GetDebugView());
 
 		builder.Services.AddTransient<FileGenerator>();
 		builder.Services.AddTransient<FileSorter>();
