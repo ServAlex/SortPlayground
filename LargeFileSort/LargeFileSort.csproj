@@ -34,6 +34,8 @@
       <Compile Remove="Chunks100\**" />
       <Compile Remove="Chunks10\**" />
       <Compile Remove="SortArtifacts\**" />
+      <Compile Remove="FileSorting\MergeChunks\SortedFilesMergerIntermediateFiles.cs" />
+      <Compile Remove="FileSorting\MergeChunks\SortedFilesMergerSimple.cs" />
     </ItemGroup>
 
     <ItemGroup>
