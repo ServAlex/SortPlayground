@@ -3,11 +3,43 @@
 
 ### Table of contents:
 
-- <a href="#how-to-run">How to run</a>
-- <a href="#run-time-mesurements">Run time mesurements</a>
 - <a href="#problem-description">Problem description</a>
 - <a href="#algorithm">Algorithm</a>
-- <a href="#improvements-and-notes">Improvements and Notes</a>
+- <a href="#how-to-run">How to run</a>
+- <a href="#run-time-mesurements">Run time mesurements</a>
+- <a href="#improvements-and-notes">Improvements and notes</a>
+
+
+# Problem description:
+
+Generate large text file with random data. Lines have format:
+
+`<Number>. <String>`
+
+Sort file by string part, if strings match - sort by number.
+
+According to clarification, RAM budget is 16gb, string part is up to 100 characters long.
+
+
+# Algorithm:
+File is sorted using merge sort in 2 steps:
+1. Split step:
+   1) Split unsorted file into chunks (readChunkSize size, 32mb default).
+   2) Sort each chunk.
+   3) Merge into large chunks (chunkFileSize size, 1024mb default).
+   4) Write as intermediate files.
+
+
+2. Merge step:
+   1) Group intermediate files.
+   2) Each group is merged using priority queue.
+   3) Results of all the groups are merged into final file with another priority queue.
+
+All the parts of Split step run in parallel, 1.2) and 1.3) have more than one worker.
+
+Merge step: lets say we have 25 intermediate files, they will be grouped into 5 groups.
+Each group runs on separate thread and merges 5 files. Another thread merges results of 5 groups into file.
+
 
 # How to run:
 Run in command line inside `LargeFileSort` project directory using following commands:
@@ -24,7 +56,6 @@ dotnet run -c Release --generate true --fileSize 10gb --path ./SortTemp
 ```
 dotnet run -c Release --sort true --path ./SortTemp
 ```
-
 
 ## Delete files created by the previous run:
 ```
@@ -69,39 +100,13 @@ Run time on my machine (12 threads, 16gb memory budget, sata ssd, 1gb intermedia
 | 100 gb    | 210s                     | 441s           | 632s           | 1083s                             |
 
 
-# Problem description:
-
-Generate large text file with random data. Lines have format:
-
-`<Number>. <String>`
-
-Sort file by string part, if strings match - sort by number.
-
-According to clarification, RAM budget is 16gb, string part is up to 100 characters long.
-
-# Algorithm:
-File is sorted using merge sort in 2 steps:
-1. Split step:
-    1) Split unsorted file into chunks (readChunkSize size, 32mb default).
-    2) Sort each chunk.
-    3) Merge into large chunks (chunkFileSize size, 1024mb default).
-    4) Write as intermediate files.
-
-
-2. Merge step:
-    1) Group intermediate files.
-    2) Each group is merged using priority queue.
-    3) Results of all the groups are merged into final file with another priority queue.
-
-All the parts of Split step run in parallel, 1.2) and 1.3) have more than one worker.
-
-Merge step: lets say we have 25 intermediate files, they will be grouped into 5 groups.
-Each group runs on separate thread and merges 5 files. Another thread merges results of 5 groups into file.
-
-
-# Improvements and Notes:
+# Improvements and notes:
 
 - Improve test coverage.
 - Try parallel reading of unsorted file.
 - For smaller files that fit in RAM have a separate routine without intermediate files.
-- Power profile on the laptop makes a lot of difference: balanced is around 10% slower than performance, power saing is 2 times slower than performance.
+
+
+- Running as `dotnet run -c Release` in command line is significantly more performant than
+  running in Release mode in Rider, around 30-40% faster.
+- Power profile on the laptop makes a lot of difference: balanced is around 10% slower than performance, power saving is 2 times slower than performance.
