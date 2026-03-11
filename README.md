@@ -1,18 +1,13 @@
 
 # Large file sort
 
-# TOC:
+### Table of contents:
 
-<a href="#how-to-run">How to run</a>
-
-<a href="#run-time-mesurements">Run time mesurements</a>
-
-<a href="#problem-description">Problem description</a>
-
-<a href="#algorithm">Algorithm</a>
-
-<a href="#improvements-and-notes">Improvements and Notes</a>
-
+- <a href="#how-to-run">How to run</a>
+- <a href="#run-time-mesurements">Run time mesurements</a>
+- <a href="#problem-description">Problem description</a>
+- <a href="#algorithm">Algorithm</a>
+- <a href="#improvements-and-notes">Improvements and Notes</a>
 
 # How to run:
 Run in command line inside `LargeFileSort` project directory using following commands:
