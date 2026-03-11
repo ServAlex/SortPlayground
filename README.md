@@ -3,15 +3,18 @@
 
 # TOC:
 
-<a href="#-how-to-run">How to run</a>
+<a href="#how-to-run">How to run</a>
+<a href="#all-in-one---generate-random-file-and-sort">Run sort</a>
+<a href="#delete-files-created-by-the-previous-run">Delete created files</a>
+<a href="#available-options">Cli options</a>
 
-<a href="#-run-time-mesurements">Run time mesurements</a>
+<a href="#run-time-mesurements">Run time mesurements</a>
 
-<a href="#-problem-description">Problem description</a>
+<a href="#problem-description">Problem description</a>
 
-<a href="#-algorithm">Algorithm</a>
+<a href="#algorithm">Algorithm</a>
 
-<a href="#-improvements-and-notes">Improvements and Notes</a>
+<a href="#improvements-and-notes">Improvements and Notes</a>
 
 
 # How to run:
@@ -87,9 +90,9 @@ According to clarification, RAM budget is 16gb, string part is up to 100 charact
 # Algorithm:
 File is sorted using merge sort in 2 steps:
 1. Split step:
-    1) Split unsorted file into chunks (readChunkSize size, 32mb default)
-    2) Sort each chunk
-    3) Merge into large chunks (chunkFileSize size, 1024mb default)
+    1) Split unsorted file into chunks (readChunkSize size, 32mb default).
+    2) Sort each chunk.
+    3) Merge into large chunks (chunkFileSize size, 1024mb default).
     4) Write as intermediate files.
 
 
