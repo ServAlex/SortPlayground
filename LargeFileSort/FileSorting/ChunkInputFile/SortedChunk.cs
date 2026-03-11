@@ -3,7 +3,7 @@ using LargeFileSort.Logging;
 namespace LargeFileSort.FileSorting.ChunkInputFile;
 
 /// <summary>
-/// consists of one or more UnsortedChunks and maintains order of lines across those chunks
+/// consists of one or more UnsortedChunks and maintains the order of lines across those chunks
 /// </summary>
 public class SortedChunk
 {

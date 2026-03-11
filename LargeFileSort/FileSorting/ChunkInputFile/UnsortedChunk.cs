@@ -5,7 +5,7 @@ public sealed class UnsortedChunk
 	public char[] Buffer { get; }
 	
 	/// <summary>
-	/// represents how long is the first part of the line that was copied from previous chunk to beginning of this one
+	/// represents how long is the first part of the line that was copied from the previous chunk to the beginning of this one
 	/// </summary>
 	public int StartOffset { get; set; }
 	
