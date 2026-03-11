@@ -4,9 +4,6 @@
 # TOC:
 
 <a href="#how-to-run">How to run</a>
-<a href="#all-in-one---generate-random-file-and-sort">Run sort</a>
-<a href="#delete-files-created-by-the-previous-run">Delete created files</a>
-<a href="#available-options">Cli options</a>
 
 <a href="#run-time-mesurements">Run time mesurements</a>
 
